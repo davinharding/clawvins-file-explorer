@@ -15,8 +15,34 @@ type ApiContentResponse =
   | { content?: string; data?: string; text?: string; body?: string }
   | { error?: string };
 
+// ── Auth token management ────────────────────────────────────────────────────
+// Priority: 1) URL ?token= param  2) localStorage  3) empty (will 401)
+
+const LS_KEY = 'fe_token';
+
+function getToken(): string {
+  // Try URL param first (sets/refreshes localStorage)
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get('token');
+  if (urlToken) {
+    try { localStorage.setItem(LS_KEY, urlToken); } catch (_) {}
+    return urlToken;
+  }
+  // Fall back to localStorage
+  try { return localStorage.getItem(LS_KEY) ?? ''; } catch (_) { return ''; }
+}
+
+function authHeaders(): HeadersInit {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+// ── End auth ─────────────────────────────────────────────────────────────────
+
 async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
+  const res = await fetch(url, {
+    ...options,
+    headers: { ...authHeaders(), ...(options?.headers ?? {}) },
+  });
   if (!res.ok) {
     throw new Error(`Request failed (${res.status})`);
   }
@@ -55,7 +81,7 @@ export async function fetchFileTree(path = '', workspace = 'workspace'): Promise
 export async function fetchFileContent(path: string, workspace = 'workspace'): Promise<string> {
   const encoded = encodeURIComponent(path);
   const url = `/api/files/content?path=${encoded}&workspace=${encodeURIComponent(workspace)}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Failed to load content (${res.status})`);
   const contentType = res.headers.get('content-type') ?? '';
   if (contentType.includes('application/json')) {
@@ -66,5 +92,7 @@ export async function fetchFileContent(path: string, workspace = 'workspace'): P
 }
 
 export function buildWorkspaceFileUrl(filePath: string, workspace = 'workspace'): string {
-  return `/ws/${encodeURIComponent(workspace)}/${filePath}`;
+  const token = getToken();
+  const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
+  return `/ws/${encodeURIComponent(workspace)}/${filePath}${tokenParam}`;
 }
