@@ -247,7 +247,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-grid">
-      <div className="mx-auto flex min-h-screen max-w-[1400px] flex-col p-6">
+      <div className="flex min-h-screen flex-col px-4 py-4 lg:px-6">
         {/* Header */}
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -282,7 +282,7 @@ export default function App() {
 
         <div className="grid flex-1 gap-5 lg:grid-cols-[280px_1fr]">
           {/* Sidebar */}
-          <Card className="flex h-[calc(100vh-180px)] flex-col bg-card/80 p-4">
+          <Card className="flex h-[calc(100vh-140px)] flex-col bg-card/80 p-4">
             <div className="mb-3 flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">File Tree</span>
               <Button type="button" variant="ghost" size="icon" onClick={handleRefresh}>
@@ -319,7 +319,7 @@ export default function App() {
           </Card>
 
           {/* Main Content */}
-          <div className="flex h-[calc(100vh-180px)] flex-col gap-4">
+          <div className="flex h-[calc(100vh-140px)] flex-col gap-4">
             <Card className="bg-card/80 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <Breadcrumbs items={breadcrumbs} onNavigate={handleNavigate} />

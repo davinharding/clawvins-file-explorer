@@ -49,7 +49,21 @@ const MarkdownCode = ({
   const code = String(children ?? '').replace(/\n$/, '');
 
   if (inline) {
-    return <code className={className}>{code}</code>;
+    return (
+      <code 
+        className={cn(
+          className,
+          "break-words break-all"
+        )}
+        style={{
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          overflowWrap: 'break-word'
+        }}
+      >
+        {code}
+      </code>
+    );
   }
 
   const match = /language-(\w+)/.exec(className ?? '');
@@ -60,7 +74,13 @@ const MarkdownCode = ({
       style={oneDark}
       language={language}
       PreTag="div"
-      customStyle={{ background: 'transparent', margin: 0 }}
+      customStyle={{
+        background: 'transparent',
+        margin: 0,
+        whiteSpace: 'pre-wrap',
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word',
+      }}
     >
       {code}
     </SyntaxHighlighter>
@@ -96,7 +116,7 @@ export default function FilePreview({ file, content, loading, error, workspace }
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
 
   return (
-    <Card className="h-full bg-card/80">
+    <Card className="h-full max-w-[100vw] overflow-hidden bg-card/80">
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           {isImage ? <FileImage className="h-5 w-5 text-primary" /> : null}
@@ -109,7 +129,7 @@ export default function FilePreview({ file, content, loading, error, workspace }
         </div>
         <Badge variant="accent">{ext || 'file'}</Badge>
       </CardHeader>
-      <CardContent className="h-[calc(100%-86px)]">
+      <CardContent className="h-[calc(100%-86px)] overflow-hidden">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading content...
@@ -125,7 +145,7 @@ export default function FilePreview({ file, content, loading, error, workspace }
             />
           </div>
         ) : isMarkdown ? (
-          <div className="markdown-content max-h-[70vh] overflow-auto rounded-lg border border-border bg-background/60 p-4">
+          <div className="markdown-content max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4 prose prose-sm prose-invert max-w-none break-words prose-code:break-words prose-code:break-all prose-code:whitespace-pre-wrap prose-pre:break-words prose-pre:whitespace-pre-wrap">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -136,13 +156,24 @@ export default function FilePreview({ file, content, loading, error, workspace }
             </ReactMarkdown>
           </div>
         ) : (
-          <div className={cn('max-h-[70vh] overflow-auto rounded-lg border border-border bg-background/60 p-4', language === 'text' ? '' : '')}>
+          <div
+            className={cn(
+              'file-preview-code max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4',
+              language === 'text' ? '' : ''
+            )}
+          >
             <SyntaxHighlighter
               style={oneDark}
               language={language}
               showLineNumbers
               wrapLongLines
-              customStyle={{ background: 'transparent', margin: 0 }}
+              customStyle={{
+                background: 'transparent',
+                margin: 0,
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
+              }}
             >
               {content}
             </SyntaxHighlighter>

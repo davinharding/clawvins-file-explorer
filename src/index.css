@@ -53,3 +53,28 @@ body {
   margin: 0;
   background: transparent !important;
 }
+
+.markdown-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.markdown-content pre,
+.markdown-content code,
+.file-preview-code pre,
+.file-preview-code code {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.file-preview-code {
+  max-width: 100%;
+  overflow-x: hidden;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
