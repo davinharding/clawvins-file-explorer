@@ -8,28 +8,28 @@ A modern, React-based file browser for OpenClaw agent workspaces — explore fil
 
 ## ✨ Features
 
-- **Multi-workspace support** — Switch between Clawvin, Patch, Scout, Vitals, Ledger, Atlas workspaces
-- **File tree navigation** — Collapsible folder tree with lazy-loading
-- **Rich file preview** — Syntax-highlighted code, rendered Markdown, image display
-- **Search** — Filter files by name in real-time
-- **Breadcrumb navigation** — Quick path navigation
-- **Download** — One-click file download
-- **Copy path** — Copy file path to clipboard
-- **Responsive UI** — Clean, modern Tailwind design with Radix UI components
+- **Multi-workspace support** — Switch between Clawvin, Patch, Scout, Vitals, Ledger, Atlas
+- **Lazy-loaded file tree** — Expand folders on demand with loading indicators
+- **Search with auto-expand** — Filter by name and auto-open matching folders
+- **Rich previews** — Syntax-highlighted code, rendered Markdown (GFM), inline images
+- **Breadcrumb navigation** — Jump to any parent path
+- **Quick actions** — Copy file path + one-click download
+- **Resilient UX** — Loading + error states for tree and file content
+- **Responsive layout** — Clean, modern UI with Radix primitives + Tailwind
 
 ---
 
-## 🛠 Stack
+## 🛠 Tech Stack
 
 | Layer | Tech |
 |-------|------|
 | UI Framework | React 18 + TypeScript |
 | Bundler | Vite 5 |
-| Styling | Tailwind CSS 3 |
-| Components | Radix UI primitives |
+| Styling | Tailwind CSS 3 + class-variance-authority |
+| Components | Radix UI primitives (shadcn-style) |
 | Icons | Lucide React |
 | Markdown | `react-markdown` + `remark-gfm` |
-| Syntax Highlighting | `react-syntax-highlighter` |
+| Syntax Highlighting | Prism via `react-syntax-highlighter` |
 
 ---
 
@@ -37,9 +37,9 @@ A modern, React-based file browser for OpenClaw agent workspaces — explore fil
 
 ### Prerequisites
 - Node.js 18+
-- OpenClaw Gateway running (provides file API)
+- OpenClaw Gateway (provides the file API)
 
-### Setup
+### Install
 
 ```bash
 npm install
@@ -64,32 +64,35 @@ Builds to `dist/` and serves on port `4173`.
 
 ---
 
-## 📁 Project Structure
+## 🔐 Authentication (Optional)
 
-```
-src/
-├── App.tsx                  # Main shell, workspace tabs, file tree + preview layout
-├── components/
-│   ├── FileTree.tsx         # Collapsible folder tree
-│   ├── FilePreview.tsx      # File content viewer (code/markdown/image)
-│   ├── Breadcrumbs.tsx      # Path navigation
-│   ├── SearchBar.tsx        # File filter search
-│   └── ui/                  # Radix/shadcn primitives
-├── lib/
-│   ├── api.ts               # OpenClaw workspace API client
-│   └── utils.ts             # Tailwind utility helpers
-└── main.tsx
-```
+This UI supports token-based auth if your Gateway requires it.
+
+- Supply a token via URL: `?token=YOUR_TOKEN`
+- The token is persisted to `localStorage` under `fe_token`
+- API requests use `Authorization: Bearer <token>`
+- Downloads use a `?token=` query param
+
+---
+
+## 🔧 Configuration
+
+No environment variables are required by default. The app calls the Gateway using relative paths, so it expects to be served behind the same origin as the API (or via a reverse proxy).
+
+Optional URL params:
+- `?workspace=workspace-coder` to preselect a workspace
+- `?token=...` for authenticated access (see above)
 
 ---
 
 ## 🔌 API Integration
 
-Connects to OpenClaw Gateway's file API:
+The app expects the following Gateway routes:
 
 ```
-GET /api/workspace/:workspaceId/files         # List directory
-GET /api/workspace/:workspaceId/files/:path   # Get file content
+GET /api/files?path=<path>&workspace=<workspaceId>     # List directory
+GET /api/files/content?path=<path>&workspace=<workspaceId>  # Get file content
+GET /ws/<workspaceId>/<path>[?token=...]               # File download / image preview
 ```
 
 Workspace IDs:
@@ -102,13 +105,42 @@ Workspace IDs:
 
 ---
 
+## 🧱 Architecture Overview
+
+- **UI shell** (`src/App.tsx`) handles workspace selection, tree state, and preview state.
+- **API client** (`src/lib/api.ts`) fetches directory trees + file content and handles auth.
+- **File tree** (`src/components/FileTree.tsx`) renders a collapsible, lazy-loaded tree.
+- **File preview** (`src/components/FilePreview.tsx`) renders code, markdown, or images.
+- **Design system** (`src/components/ui/`) wraps Radix primitives with Tailwind styles.
+
+---
+
+## 📁 Project Structure
+
+```
+src/
+├── App.tsx                  # Main shell, workspace tabs, file tree + preview layout
+├── components/
+│   ├── FileTree.tsx         # Collapsible folder tree with lazy loading
+│   ├── FilePreview.tsx      # File content viewer (code/markdown/image)
+│   ├── Breadcrumbs.tsx      # Path navigation
+│   ├── SearchBar.tsx        # File filter search
+│   └── ui/                  # Radix/shadcn primitives
+├── lib/
+│   ├── api.ts               # Gateway API client + auth helpers
+│   └── utils.ts             # Tailwind utility helpers
+└── main.tsx
+```
+
+---
+
 ## 🎨 Supported File Types
 
 | Type | Preview |
 |------|---------|
-| Code | Syntax-highlighted (js, ts, tsx, py, sh, etc.) |
+| Code | Syntax-highlighted (ts, tsx, js, json, py, sh, etc.) |
 | Markdown | Rendered with GitHub Flavored Markdown |
-| Images | Inline display (jpg, png, gif, webp) |
+| Images | Inline display (jpg, png, gif, webp, svg) |
 | Other | Raw text display |
 
 ---
