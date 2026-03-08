@@ -37,6 +37,15 @@ const CODE_LANGUAGE: Record<string, string> = {
 
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
 
+const formatFileSize = (bytes?: number): string | null => {
+  if (bytes == null || bytes < 0) return null;
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / Math.pow(1024, i);
+  return `${i === 0 ? value : value.toFixed(1)} ${units[i]}`;
+};
+
 const MarkdownCode = ({
   className,
   children,
@@ -107,7 +116,12 @@ export default function FilePreview({ file, content, loading, error, workspace }
             <div className="text-xs text-muted-foreground">{file.path}</div>
           </div>
         </div>
-        <Badge variant="accent">{ext || 'file'}</Badge>
+        <div className="flex items-center gap-2">
+          {file.size != null && formatFileSize(file.size) ? (
+            <span className="text-xs text-muted-foreground">{formatFileSize(file.size)}</span>
+          ) : null}
+          <Badge variant="accent">{ext || 'file'}</Badge>
+        </div>
       </CardHeader>
       <CardContent className="h-[calc(100%-86px)]">
         {loading ? (
