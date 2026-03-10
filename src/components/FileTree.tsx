@@ -61,7 +61,7 @@ export default function FileTree({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="flex w-full items-center justify-start gap-2 px-1 text-left"
+                      className="flex w-full min-h-11 items-center justify-start gap-2 px-1 py-2 text-left md:min-h-0 md:py-1.5"
                       onClick={() => onSelect(node)}
                     >
                       {isOpen ? (
@@ -103,7 +103,7 @@ export default function FileTree({
               size="sm"
               onClick={() => onSelect(node)}
               className={cn(
-                'flex w-full items-center justify-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
+                'flex w-full min-h-11 items-center justify-start gap-2 rounded-lg px-2 py-2 text-left text-sm md:min-h-0 md:py-1.5',
                 isActive ? 'bg-primary/20 text-foreground' : 'text-muted-foreground hover:bg-muted/60'
               )}
             >

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import {
   Download,
   FolderTree,
   Link2,
+  Menu,
   RefreshCw,
   TerminalSquare,
+  X,
 } from 'lucide-react';
 
 import Breadcrumbs, { type BreadcrumbItem } from '@/components/Breadcrumbs';
@@ -114,6 +116,11 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get('workspace') ?? 'workspace';
   });
+  const [isMobile, setIsMobile] = useState(() =>
+    window.matchMedia('(max-width: 767px)').matches
+  );
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const drawerTouchStartX = useRef<number | null>(null);
 
   const loadDirectory = useCallback(
     async (p: string) => {
@@ -152,6 +159,20 @@ export default function App() {
 
     void init();
   }, [workspace]);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const handleChange = () => setIsMobile(media.matches);
+    handleChange();
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile && drawerOpen) {
+      setDrawerOpen(false);
+    }
+  }, [drawerOpen, isMobile]);
 
   useEffect(() => {
     if (!selectedFile || selectedFile.type !== 'file') {
@@ -206,6 +227,9 @@ export default function App() {
       setSelectedFile(node);
       setCurrentPath(getParentPath(node.path));
     }
+    if (isMobile && node.type === 'file') {
+      setDrawerOpen(false);
+    }
   };
 
   const breadcrumbs = useMemo(() => buildBreadcrumbs(currentPath), [currentPath]);
@@ -215,6 +239,23 @@ export default function App() {
     const next = new Set(openNodes);
     if (p) next.add(p);
     setOpenNodes(next);
+  };
+
+  const handleDrawerTouchStart = (event: TouchEvent<HTMLElement>) => {
+    drawerTouchStartX.current = event.touches[0]?.clientX ?? null;
+  };
+
+  const handleDrawerTouchMove = (event: TouchEvent<HTMLElement>) => {
+    if (drawerTouchStartX.current === null) return;
+    const deltaX = event.touches[0]?.clientX - drawerTouchStartX.current;
+    if (deltaX < -60) {
+      setDrawerOpen(false);
+      drawerTouchStartX.current = null;
+    }
+  };
+
+  const handleDrawerTouchEnd = () => {
+    drawerTouchStartX.current = null;
   };
 
   const handleRefresh = () => {
@@ -244,6 +285,56 @@ export default function App() {
   };
 
   const currentWorkspaceLabel = WORKSPACES.find((w) => w.id === workspace)?.label ?? workspace;
+  const sidebarContent = (
+    <>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">File Tree</span>
+        <div className="flex items-center gap-1">
+          <Button type="button" variant="ghost" size="icon" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          {isMobile ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Close file tree"
+              onClick={() => setDrawerOpen(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </div>
+      </div>
+      <SearchBar value={search} onChange={setSearch} />
+      <Separator className="my-3" />
+      <ScrollArea className="flex-1">
+        {treeLoading ? (
+          <div className="text-sm text-muted-foreground">Loading tree...</div>
+        ) : treeError ? (
+          <div className="text-sm text-rose-300">{treeError}</div>
+        ) : filteredTree.length === 0 ? (
+          <div className="text-sm text-muted-foreground">No matches</div>
+        ) : (
+          <FileTree
+            nodes={filteredTree}
+            openNodes={searchOpenNodes}
+            loadingNodes={loadingNodes}
+            selectedPath={selectedFile?.path ?? currentPath}
+            onToggle={handleToggle}
+            onSelect={handleSelect}
+          />
+        )}
+      </ScrollArea>
+      <Separator className="my-3" />
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>{tree.length} root items</span>
+        <span className="flex items-center gap-1">
+          <TerminalSquare className="h-3 w-3" /> /ws/{workspace}
+        </span>
+      </div>
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-grid">
@@ -251,6 +342,18 @@ export default function App() {
         {/* Header */}
         <header className="mb-5 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              aria-label="Open file tree"
+              aria-expanded={drawerOpen}
+              aria-controls="mobile-file-drawer"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/20 text-primary shadow-glow">
               <FolderTree className="h-6 w-6" />
             </div>
@@ -262,60 +365,64 @@ export default function App() {
 
           {/* Workspace Switcher */}
           <div className="flex flex-wrap items-center gap-2">
-            {WORKSPACES.map((ws) => (
-              <button
-                key={ws.id}
-                type="button"
-                onClick={() => setWorkspace(ws.id)}
-                className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-                  workspace === ws.id
-                    ? 'bg-primary/20 text-primary border border-primary/40'
-                    : 'bg-muted/40 text-muted-foreground border border-border hover:bg-muted/60 hover:text-foreground'
-                )}
+            <div className="lg:hidden">
+              <select
+                value={workspace}
+                onChange={(event) => setWorkspace(event.target.value)}
+                className="h-10 rounded-lg border border-border bg-muted/40 px-3 text-xs font-semibold text-foreground"
+                aria-label="Select workspace"
               >
-                {ws.label}
-              </button>
-            ))}
+                {WORKSPACES.map((ws) => (
+                  <option key={ws.id} value={ws.id}>
+                    {ws.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="hidden items-center gap-2 lg:flex">
+              {WORKSPACES.map((ws) => (
+                <button
+                  key={ws.id}
+                  type="button"
+                  onClick={() => setWorkspace(ws.id)}
+                  className={cn(
+                    'rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                    workspace === ws.id
+                      ? 'bg-primary/20 text-primary border border-primary/40'
+                      : 'bg-muted/40 text-muted-foreground border border-border hover:bg-muted/60 hover:text-foreground'
+                  )}
+                >
+                  {ws.label}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
+        {isMobile ? (
+          <>
+            <div
+              className={cn('drawer-overlay', drawerOpen && 'is-open')}
+              onClick={() => setDrawerOpen(false)}
+            />
+            <aside
+              id="mobile-file-drawer"
+              className={cn('drawer-panel', drawerOpen && 'is-open')}
+              onTouchStart={handleDrawerTouchStart}
+              onTouchMove={handleDrawerTouchMove}
+              onTouchEnd={handleDrawerTouchEnd}
+            >
+              <Card className="flex h-full flex-col bg-card/90 p-4">
+                {sidebarContent}
+              </Card>
+            </aside>
+          </>
+        ) : null}
+
         <div className="grid flex-1 gap-5 lg:grid-cols-[280px_1fr]">
           {/* Sidebar */}
-          <Card className="flex h-[calc(100vh-140px)] flex-col bg-card/80 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-foreground">File Tree</span>
-              <Button type="button" variant="ghost" size="icon" onClick={handleRefresh}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-            <SearchBar value={search} onChange={setSearch} />
-            <Separator className="my-3" />
-            <ScrollArea className="flex-1">
-              {treeLoading ? (
-                <div className="text-sm text-muted-foreground">Loading tree...</div>
-              ) : treeError ? (
-                <div className="text-sm text-rose-300">{treeError}</div>
-              ) : filteredTree.length === 0 ? (
-                <div className="text-sm text-muted-foreground">No matches</div>
-              ) : (
-                <FileTree
-                  nodes={filteredTree}
-                  openNodes={searchOpenNodes}
-                  loadingNodes={loadingNodes}
-                  selectedPath={selectedFile?.path ?? currentPath}
-                  onToggle={handleToggle}
-                  onSelect={handleSelect}
-                />
-              )}
-            </ScrollArea>
-            <Separator className="my-3" />
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{tree.length} root items</span>
-              <span className="flex items-center gap-1">
-                <TerminalSquare className="h-3 w-3" /> /ws/{workspace}
-              </span>
-            </div>
+          <Card className="hidden h-[calc(100vh-140px)] flex-col bg-card/80 p-4 lg:flex">
+            {sidebarContent}
           </Card>
 
           {/* Main Content */}

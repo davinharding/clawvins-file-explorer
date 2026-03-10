@@ -83,3 +83,33 @@ body {
   overflow-wrap: break-word;
   white-space: pre-wrap;
 }
+
+.drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 12, 20, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease;
+  z-index: 40;
+}
+
+.drawer-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(82vw, 320px);
+  transform: translateX(-100%);
+  transition: transform 260ms ease;
+  z-index: 50;
+}
+
+.drawer-panel.is-open {
+  transform: translateX(0);
+}
