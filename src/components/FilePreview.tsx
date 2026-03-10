@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { FileCode2, FileImage, FileText, Loader2 } from 'lucide-react';
+import { Check, Copy, FileCode2, FileImage, FileText, Loader2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
@@ -78,7 +79,7 @@ const MarkdownCode = ({
         background: 'transparent',
         margin: 0,
         whiteSpace: 'pre-wrap',
-        wordWrap: 'break-word',
+        wordBreak: 'break-all',
         overflowWrap: 'break-word',
       }}
     >
@@ -96,6 +97,20 @@ type FilePreviewProps = {
 };
 
 export default function FilePreview({ file, content, loading, error, workspace }: FilePreviewProps) {
+  const [copied, setCopied] = useState(false);
+  const copyTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+    };
+  }, []);
+  useEffect(() => {
+    setCopied(false);
+  }, [file?.path]);
+
   if (!file) {
     return (
       <Card className="h-full bg-card/80">
@@ -114,6 +129,26 @@ export default function FilePreview({ file, content, loading, error, workspace }
   const isMarkdown = MARKDOWN_EXT.includes(ext);
   const language = CODE_LANGUAGE[ext] ?? 'text';
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
+  const canCopy = !isImage && !loading && !error;
+
+  const handleCopy = async () => {
+    if (!canCopy) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(true);
+      if (copyTimeoutRef.current !== null) {
+        window.clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch {
+      // Clipboard may be unavailable; fail silently.
+    }
+  };
 
   return (
     <Card className="h-full max-w-[100vw] overflow-hidden bg-card/80">
@@ -145,7 +180,29 @@ export default function FilePreview({ file, content, loading, error, workspace }
             />
           </div>
         ) : isMarkdown ? (
-          <div className="markdown-content max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4 prose prose-sm prose-invert max-w-none break-words prose-code:break-words prose-code:break-all prose-code:whitespace-pre-wrap prose-pre:break-words prose-pre:whitespace-pre-wrap">
+          <div className="group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4">
+            {canCopy ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleCopy}
+                className="absolute right-3 top-3 z-10 bg-background/70 text-xs text-foreground opacity-0 shadow-sm transition-opacity hover:bg-background/90 group-hover:opacity-100"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-300" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            ) : null}
+            <div className="markdown-content prose prose-sm prose-invert max-w-none break-words prose-code:break-words prose-code:break-all prose-code:whitespace-pre-wrap prose-pre:break-words prose-pre:whitespace-pre-wrap">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
@@ -154,14 +211,36 @@ export default function FilePreview({ file, content, loading, error, workspace }
             >
               {content}
             </ReactMarkdown>
+            </div>
           </div>
         ) : (
           <div
             className={cn(
-              'file-preview-code max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4',
+              'file-preview-code group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4',
               language === 'text' ? '' : ''
             )}
           >
+            {canCopy ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={handleCopy}
+                className="absolute right-3 top-3 z-10 bg-background/70 text-xs text-foreground opacity-0 shadow-sm transition-opacity hover:bg-background/90 group-hover:opacity-100"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-3.5 w-3.5 text-emerald-300" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy
+                  </>
+                )}
+              </Button>
+            ) : null}
             <SyntaxHighlighter
               style={oneDark}
               language={language}
