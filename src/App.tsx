@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { buildWorkspaceFileUrl, fetchFileContent, listDirectory, type FileNode } from '@/lib/api';
+import { collectDirPaths, filterTree } from '@/lib/tree';
 import { cn } from '@/lib/utils';
 
 const WORKSPACES = [
@@ -35,33 +36,6 @@ const getParentPath = (p: string) => {
   const parts = p.split('/');
   parts.pop();
   return parts.join('/');
-};
-
-const collectDirPaths = (nodes: FileNode[], acc: Set<string>) => {
-  nodes.forEach((node) => {
-    if (node.type === 'dir') {
-      acc.add(node.path);
-      if (node.children) collectDirPaths(node.children, acc);
-    }
-  });
-};
-
-const filterTree = (nodes: FileNode[], query: string): FileNode[] => {
-  if (!query) return nodes;
-  const q = query.toLowerCase();
-  return nodes
-    .map((node) => {
-      if (node.type === 'dir') {
-        const children = node.children ? filterTree(node.children, query) : [];
-        if (node.name.toLowerCase().includes(q) || children.length > 0) {
-          return { ...node, children };
-        }
-        return null;
-      }
-      if (node.name.toLowerCase().includes(q)) return node;
-      return null;
-    })
-    .filter(Boolean) as FileNode[];
 };
 
 const buildBreadcrumbs = (p: string): BreadcrumbItem[] => {
@@ -122,6 +96,7 @@ export default function App() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerTouchStartX = useRef<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadDirectory = useCallback(
     async (p: string) => {
@@ -174,6 +149,17 @@ export default function App() {
       setDrawerOpen(false);
     }
   }, [drawerOpen, isMobile]);
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   useEffect(() => {
     if (!selectedFile || selectedFile.type !== 'file') {
@@ -307,7 +293,7 @@ export default function App() {
           ) : null}
         </div>
       </div>
-      <SearchBar value={search} onChange={setSearch} />
+      <SearchBar value={search} onChange={setSearch} inputRef={searchInputRef} />
       <Separator className="my-3" />
       <ScrollArea className="flex-1">
         {treeLoading ? (

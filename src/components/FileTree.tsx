@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, File, FileCode2, FileImage, FileText, Folder
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn } from '@/lib/utils';
+import { cn, formatFileSize } from '@/lib/utils';
 import type { FileNode } from '@/lib/api';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
@@ -296,6 +296,11 @@ export default function FileTree({
               >
                 <Icon className="h-4 w-4" />
                 <span className="truncate">{node.name}</span>
+                {typeof node.size === 'number' ? (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {formatFileSize(node.size)}
+                  </span>
+                ) : null}
               </Button>
             </li>
           );
