@@ -113,3 +113,17 @@ body {
 .drawer-panel.is-open {
   transform: translateX(0);
 }
+
+.tree-item {
+  outline: none;
+}
+
+.tree-item:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px hsl(var(--accent) / 0.35);
+}
+
+.tree-item-focused {
+  box-shadow: 0 0 0 1px hsl(var(--accent) / 0.6);
+}

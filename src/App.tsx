@@ -104,6 +104,7 @@ export default function App() {
   const [tree, setTree] = useState<FileNode[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
   const [currentPath, setCurrentPath] = useState('');
+  const [focusedPath, setFocusedPath] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [openNodes, setOpenNodes] = useState<Set<string>>(new Set());
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set());
@@ -321,8 +322,10 @@ export default function App() {
             openNodes={searchOpenNodes}
             loadingNodes={loadingNodes}
             selectedPath={selectedFile?.path ?? currentPath}
+            focusedPath={focusedPath}
             onToggle={handleToggle}
             onSelect={handleSelect}
+            onFocusPathChange={setFocusedPath}
           />
         )}
       </ScrollArea>
