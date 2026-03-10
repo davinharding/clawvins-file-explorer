@@ -49,6 +49,11 @@ body {
   scrollbar-width: none;
 }
 
+.breadcrumb-fade {
+  mask-image: linear-gradient(to right, transparent 0, black 24px);
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 24px);
+}
+
 .code-highlight pre {
   margin: 0;
   background: transparent !important;
