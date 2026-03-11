@@ -27,6 +27,9 @@ const WORKSPACES = [
   { id: 'workspace-coder', label: 'Patch' },
   { id: 'workspace-scout', label: 'Scout' },
   { id: 'workspace-health', label: 'Vitals' },
+  { id: 'workspace-alpha', label: 'Alpha' },
+  { id: 'workspace-iris', label: 'Iris' },
+  { id: 'workspace-nova', label: 'Nova' },
   { id: 'workspace-finance', label: 'Ledger' },
   { id: 'workspace-atlas', label: 'Atlas' },
 ];
