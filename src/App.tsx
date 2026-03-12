@@ -300,7 +300,17 @@ export default function App() {
       <Separator className="my-3" />
       <ScrollArea className="flex-1">
         {treeLoading ? (
-          <div className="text-sm text-muted-foreground">Loading tree...</div>
+          <div className="space-y-2 animate-pulse">
+            {[60, 80, 52, 70, 45, 75, 58].map((width, index) => (
+              <div
+                key={`tree-skeleton-${width}-${index}`}
+                className={`flex items-center gap-2 ${index % 2 === 1 ? 'pl-4' : 'pl-0'}`}
+              >
+                <div className="h-4 w-4 rounded-full bg-muted/40" />
+                <div className="h-3 rounded bg-muted/40" style={{ width: `${width}%` }} />
+              </div>
+            ))}
+          </div>
         ) : treeError ? (
           <div className="text-sm text-rose-300">{treeError}</div>
         ) : filteredTree.length === 0 ? (

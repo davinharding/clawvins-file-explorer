@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { Check, Copy, FileCode2, FileImage, FileText, Loader2 } from 'lucide-react';
+import { Check, Copy, FileCode2, FileImage, FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -191,8 +191,17 @@ export default function FilePreview({ file, content, loading, error, workspace }
       </CardHeader>
       <CardContent className="h-[calc(100%-86px)] overflow-hidden">
         {loading ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading content...
+          <div className="h-full animate-pulse">
+            <div className="h-6 w-full rounded bg-muted/40" />
+            <div className="mt-4 space-y-3">
+              {[95, 88, 76, 92, 64, 84, 58, 72, 46, 66].map((width, index) => (
+                <div
+                  key={`preview-skeleton-${width}-${index}`}
+                  className="h-3 rounded bg-muted/40"
+                  style={{ width: `${width}%` }}
+                />
+              ))}
+            </div>
           </div>
         ) : error ? (
           <div className="text-sm text-rose-300">{error}</div>
