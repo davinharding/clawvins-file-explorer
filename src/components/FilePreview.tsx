@@ -114,11 +114,36 @@ export default function FilePreview({ file, content, loading, error, workspace }
   if (!file) {
     return (
       <Card className="h-full bg-card/80">
-        <CardHeader>
-          <CardTitle className="text-lg">Select a file</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Pick a file from the tree to preview its contents.
+        <CardContent className="flex h-full flex-col items-center justify-center gap-5 p-8 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <FileText className="h-7 w-7 text-primary" />
+          </div>
+          <div className="space-y-1">
+            <CardTitle className="text-lg font-semibold">Select a file</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Pick a file from the tree to preview its contents.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:gap-4">
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+                Ctrl+K
+              </kbd>
+              Search files
+            </span>
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+                ↑↓
+              </kbd>
+              Navigate tree
+            </span>
+            <span className="flex items-center gap-2">
+              <kbd className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px]">
+                Enter
+              </kbd>
+              Open file
+            </span>
+          </div>
         </CardContent>
       </Card>
     );
