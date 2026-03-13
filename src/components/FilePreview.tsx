@@ -99,6 +99,8 @@ type FilePreviewProps = {
 export default function FilePreview({ file, content, loading, error, workspace }: FilePreviewProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<number | null>(null);
+  const scrollPositionsRef = useRef<Map<string, number>>(new Map());
+  const previewScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -110,6 +112,25 @@ export default function FilePreview({ file, content, loading, error, workspace }
   useEffect(() => {
     setCopied(false);
   }, [file?.path]);
+
+  useEffect(() => {
+    if (!file?.path) {
+      return;
+    }
+    const container = previewScrollRef.current;
+    if (!container) {
+      return;
+    }
+    const savedScrollTop = scrollPositionsRef.current.get(file.path);
+    container.scrollTop = savedScrollTop ?? 0;
+  }, [file?.path]);
+
+  const handlePreviewScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    if (!file?.path) {
+      return;
+    }
+    scrollPositionsRef.current.set(file.path, event.currentTarget.scrollTop);
+  };
 
   if (!file) {
     return (
@@ -214,7 +235,11 @@ export default function FilePreview({ file, content, loading, error, workspace }
             />
           </div>
         ) : isMarkdown ? (
-          <div className="group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4">
+          <div
+            ref={previewScrollRef}
+            onScroll={handlePreviewScroll}
+            className="group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4"
+          >
             {canCopy ? (
               <Button
                 type="button"
@@ -249,6 +274,8 @@ export default function FilePreview({ file, content, loading, error, workspace }
           </div>
         ) : (
           <div
+            ref={previewScrollRef}
+            onScroll={handlePreviewScroll}
             className={cn(
               'file-preview-code group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4',
               language === 'text' ? '' : ''
