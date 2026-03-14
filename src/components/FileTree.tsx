@@ -267,9 +267,17 @@ export default function FileTree({
                         <Icon className="h-4 w-4 text-primary" />
                         <span className="truncate font-semibold text-foreground">{node.name}</span>
                         {isLoading ? <Badge variant="outline">Loading</Badge> : null}
-                        {relativeTime ? (
-                          <span className="ml-auto text-xs text-muted-foreground">{relativeTime}</span>
-                        ) : null}
+                        {(() => {
+                          const countLabel = typeof node.childCount === 'number' && node.childCount > 0
+                            ? `${node.childCount}`
+                            : '';
+                          const meta = countLabel && relativeTime
+                            ? `${countLabel} · ${relativeTime}`
+                            : countLabel || relativeTime;
+                          return meta ? (
+                            <span className="ml-auto text-xs text-muted-foreground">{meta}</span>
+                          ) : null;
+                        })()}
                       </Button>
                     </CollapsibleTrigger>
                   </div>
