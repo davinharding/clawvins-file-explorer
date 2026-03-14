@@ -6,6 +6,7 @@ export type FileNode = {
   workspace?: string;
   note?: string;
   size?: number;
+  mtime?: number;
 };
 
 type ApiTreeResponse = FileNode[] | { tree?: FileNode[]; entries?: FileNode[]; files?: FileNode[] };

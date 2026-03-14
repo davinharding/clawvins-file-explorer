@@ -4,7 +4,7 @@ import { ChevronDown, ChevronRight, File, FileCode2, FileImage, FileText, Folder
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { cn, formatFileSize } from '@/lib/utils';
+import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
 import type { FileNode } from '@/lib/api';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
@@ -219,6 +219,7 @@ export default function FileTree({
           const isFocused = focusedPath === node.path;
           const Icon = isDir ? (isOpen ? FolderOpen : Folder) : getFileIcon(node.name);
           const index = indexByPath.get(node.path);
+          const relativeTime = formatRelativeTime(node.mtime);
 
           const commonButtonProps = {
             ref: index !== undefined
@@ -266,6 +267,9 @@ export default function FileTree({
                         <Icon className="h-4 w-4 text-primary" />
                         <span className="truncate font-semibold text-foreground">{node.name}</span>
                         {isLoading ? <Badge variant="outline">Loading</Badge> : null}
+                        {relativeTime ? (
+                          <span className="ml-auto text-xs text-muted-foreground">{relativeTime}</span>
+                        ) : null}
                       </Button>
                     </CollapsibleTrigger>
                   </div>
@@ -296,11 +300,15 @@ export default function FileTree({
               >
                 <Icon className="h-4 w-4" />
                 <span className="truncate">{node.name}</span>
-                {typeof node.size === 'number' ? (
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    {formatFileSize(node.size)}
-                  </span>
-                ) : null}
+                {(() => {
+                  const sizeLabel = typeof node.size === 'number' ? formatFileSize(node.size) : '';
+                  const meta = sizeLabel && relativeTime
+                    ? `${sizeLabel} · ${relativeTime}`
+                    : sizeLabel || relativeTime;
+                  return meta ? (
+                    <span className="ml-auto text-xs text-muted-foreground">{meta}</span>
+                  ) : null;
+                })()}
               </Button>
             </li>
           );
