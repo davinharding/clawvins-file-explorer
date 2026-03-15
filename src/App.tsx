@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import {
   Download,
+  File,
   FolderTree,
   Link2,
   Menu,
@@ -33,6 +34,9 @@ const WORKSPACES = [
   { id: 'workspace-finance', label: 'Ledger' },
   { id: 'workspace-atlas', label: 'Atlas' },
 ];
+
+const RECENT_LIMIT = 5;
+const RECENT_STORAGE_PREFIX = 'fe_recent_';
 
 const getParentPath = (p: string) => {
   if (!p) return '';
@@ -77,6 +81,26 @@ function findNode(nodes: FileNode[], p: string): FileNode | null {
   return null;
 }
 
+const getRecentStorageKey = (workspaceId: string) => `${RECENT_STORAGE_PREFIX}${workspaceId}`;
+
+const parseRecentFiles = (raw: string | null): FileNode[] => {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item): item is FileNode =>
+        item &&
+        typeof item === 'object' &&
+        item.type === 'file' &&
+        typeof item.name === 'string' &&
+        typeof item.path === 'string'
+    );
+  } catch {
+    return [];
+  }
+};
+
 export default function App() {
   const [tree, setTree] = useState<FileNode[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
@@ -90,6 +114,7 @@ export default function App() {
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [recentFiles, setRecentFiles] = useState<FileNode[]>([]);
   const [workspace, setWorkspace] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('workspace') ?? 'workspace';
@@ -100,6 +125,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerTouchStartX = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const inMemoryRecents = useRef<Map<string, FileNode[]>>(new Map());
 
   const loadDirectory = useCallback(
     async (p: string) => {
@@ -117,6 +143,27 @@ export default function App() {
     },
     [workspace]
   );
+
+  const readRecentFiles = useCallback(
+    (workspaceId: string) => {
+      const key = getRecentStorageKey(workspaceId);
+      try {
+        return parseRecentFiles(localStorage.getItem(key)).slice(0, RECENT_LIMIT);
+      } catch {
+        return inMemoryRecents.current.get(key) ?? [];
+      }
+    },
+    []
+  );
+
+  const persistRecentFiles = useCallback((workspaceId: string, files: FileNode[]) => {
+    const key = getRecentStorageKey(workspaceId);
+    try {
+      localStorage.setItem(key, JSON.stringify(files));
+    } catch {
+      inMemoryRecents.current.set(key, files);
+    }
+  }, []);
 
   useEffect(() => {
     const init = async () => {
@@ -138,6 +185,10 @@ export default function App() {
 
     void init();
   }, [workspace]);
+
+  useEffect(() => {
+    setRecentFiles(readRecentFiles(workspace));
+  }, [readRecentFiles, workspace]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
@@ -187,6 +238,10 @@ export default function App() {
     void fetchContent();
   }, [selectedFile, workspace]);
 
+  useEffect(() => {
+    persistRecentFiles(workspace, recentFiles);
+  }, [persistRecentFiles, recentFiles, workspace]);
+
   const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
   const searchOpenNodes = useMemo(() => {
     if (!search) return openNodes;
@@ -217,9 +272,19 @@ export default function App() {
       setSelectedFile(node);
       setCurrentPath(getParentPath(node.path));
     }
+    if (node.type === 'file') {
+      setRecentFiles((prev) => {
+        const next = [node, ...prev.filter((item) => item.path !== node.path)];
+        return next.slice(0, RECENT_LIMIT);
+      });
+    }
     if (isMobile && node.type === 'file') {
       setDrawerOpen(false);
     }
+  };
+
+  const handleRemoveRecent = (path: string) => {
+    setRecentFiles((prev) => prev.filter((item) => item.path !== path));
   };
 
   const breadcrumbs = useMemo(() => buildBreadcrumbs(currentPath), [currentPath]);
@@ -297,6 +362,50 @@ export default function App() {
         </div>
       </div>
       <SearchBar value={search} onChange={setSearch} inputRef={searchInputRef} />
+      {recentFiles.length > 0 ? (
+        <div className="mt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">Recent</span>
+          </div>
+          <div className="space-y-1">
+            {recentFiles.map((file) => {
+              const parentPath = getParentPath(file.path) || '/';
+              return (
+                <div
+                  key={file.path}
+                  className="flex items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left transition hover:bg-muted/50"
+                >
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(file)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                    title={file.path}
+                  >
+                    <File className="h-4 w-4 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm text-foreground">{file.name}</div>
+                      <div className="truncate text-xs text-muted-foreground">{parentPath}</div>
+                    </div>
+                  </button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    aria-label={`Remove ${file.name} from recent files`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemoveRecent(file.path);
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       <Separator className="my-3" />
       <ScrollArea className="flex-1">
         {treeLoading ? (
