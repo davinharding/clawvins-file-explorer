@@ -16,12 +16,12 @@ export const filterTree = (nodes: FileNode[], query: string): FileNode[] => {
     .map((node) => {
       if (node.type === 'dir') {
         const children = node.children ? filterTree(node.children, query) : [];
-        if (node.name.toLowerCase().includes(q) || children.length > 0) {
+        if (node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q) || children.length > 0) {
           return { ...node, children };
         }
         return null;
       }
-      if (node.name.toLowerCase().includes(q)) return node;
+      if (node.name.toLowerCase().includes(q) || node.path.toLowerCase().includes(q)) return node;
       return null;
     })
     .filter(Boolean) as FileNode[];
