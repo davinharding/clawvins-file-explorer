@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback, type FocusEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useCallback, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import { ChevronDown, ChevronRight, File, FileCode2, FileImage, FileText, Folder, FolderOpen } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ type FileTreeProps = {
   onToggle: (path: string) => void;
   onSelect: (node: FileNode) => void;
   onFocusPathChange: (path: string | null) => void;
+  onContextMenu?: (node: FileNode, position: { x: number; y: number }) => void;
 };
 
 type VisibleNode = {
@@ -61,6 +62,7 @@ export default function FileTree({
   onToggle,
   onSelect,
   onFocusPathChange,
+  onContextMenu,
 }: FileTreeProps) {
   const visibleNodes = useMemo(() => buildVisibleNodes(nodes, openNodes), [nodes, openNodes]);
   const indexByPath = useMemo(
@@ -235,6 +237,11 @@ export default function FileTree({
             onClick: () => {
               onFocusPathChange(node.path);
               onSelect(node);
+            },
+            onContextMenu: (event: MouseEvent<HTMLButtonElement>) => {
+              event.preventDefault();
+              onFocusPathChange(node.path);
+              onContextMenu?.(node, { x: event.clientX, y: event.clientY });
             },
           } as const;
 

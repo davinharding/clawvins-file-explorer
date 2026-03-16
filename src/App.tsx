@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import Breadcrumbs, { type BreadcrumbItem } from '@/components/Breadcrumbs';
+import ContextMenu from '@/components/ContextMenu';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
@@ -101,6 +102,11 @@ const parseRecentFiles = (raw: string | null): FileNode[] => {
   }
 };
 
+type ContextMenuState = {
+  node: FileNode;
+  position: { x: number; y: number };
+};
+
 export default function App() {
   const [tree, setTree] = useState<FileNode[]>([]);
   const [selectedFile, setSelectedFile] = useState<FileNode | null>(null);
@@ -115,6 +121,7 @@ export default function App() {
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [recentFiles, setRecentFiles] = useState<FileNode[]>([]);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [workspace, setWorkspace] = useState<string>(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('workspace') ?? 'workspace';
@@ -341,18 +348,30 @@ export default function App() {
     }
   };
 
-  const handleCopyPath = async () => {
-    if (!selectedFile) return;
-    await navigator.clipboard.writeText(selectedFile.path);
+  const handleCopyPath = async (node?: FileNode | null) => {
+    const target = node ?? selectedFile;
+    if (!target) return;
+    await navigator.clipboard.writeText(target.path);
   };
 
-  const handleDownload = () => {
-    if (!selectedFile) return;
-    const url = buildWorkspaceFileUrl(selectedFile.path, workspace);
+  const handleDownload = (node?: FileNode | null) => {
+    const target = node ?? selectedFile;
+    if (!target || target.type !== 'file') return;
+    const url = buildWorkspaceFileUrl(target.path, workspace);
     const link = document.createElement('a');
     link.href = url;
-    link.download = selectedFile.name;
+    link.download = target.name;
     link.click();
+  };
+
+  const handleOpenInNewTab = (node: FileNode) => {
+    if (node.type !== 'file') return;
+    const url = buildWorkspaceFileUrl(node.path, workspace);
+    window.open(url, '_blank', 'noopener');
+  };
+
+  const handleContextMenu = (node: FileNode, position: { x: number; y: number }) => {
+    setContextMenu({ node, position });
   };
 
   const currentWorkspaceLabel = WORKSPACES.find((w) => w.id === workspace)?.label ?? workspace;
@@ -450,6 +469,7 @@ export default function App() {
             onToggle={handleToggle}
             onSelect={handleSelect}
             onFocusPathChange={setFocusedPath}
+            onContextMenu={handleContextMenu}
           />
         )}
       </ScrollArea>
@@ -547,6 +567,38 @@ export default function App() {
         ) : null}
 
         <div className="grid flex-1 gap-5 lg:grid-cols-[280px_1fr]">
+          {contextMenu ? (
+            <ContextMenu
+              position={contextMenu.position}
+              onClose={() => setContextMenu(null)}
+              items={[
+                {
+                  label: 'Copy Path',
+                  onClick: () => void handleCopyPath(contextMenu.node),
+                },
+                ...(contextMenu.node.type === 'file'
+                  ? [
+                      {
+                        label: 'Download',
+                        onClick: () => handleDownload(contextMenu.node),
+                      },
+                      {
+                        label: 'Open in New Tab',
+                        onClick: () => handleOpenInNewTab(contextMenu.node),
+                      },
+                    ]
+                  : []),
+                ...(contextMenu.node.type === 'dir'
+                  ? [
+                      {
+                        label: openNodes.has(contextMenu.node.path) ? 'Collapse' : 'Expand',
+                        onClick: () => handleToggle(contextMenu.node.path),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          ) : null}
           {/* Sidebar */}
           <Card className="hidden h-[calc(100vh-140px)] flex-col bg-card/80 p-4 lg:flex">
             {sidebarContent}
