@@ -22,6 +22,7 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { buildWorkspaceFileUrl, fetchFileContent, listDirectory, type FileNode } from '@/lib/api';
+import { LARGE_FILE_THRESHOLD } from '@/lib/constants';
 import { collectDirPaths, filterTree } from '@/lib/tree';
 import { cn } from '@/lib/utils';
 
@@ -121,6 +122,7 @@ export default function App() {
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [largeFileAcknowledged, setLargeFileAcknowledged] = useState(false);
   const [recentFiles, setRecentFiles] = useState<FileNode[]>([]);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [workspace, setWorkspace] = useState<string>(() => {
@@ -243,6 +245,16 @@ export default function App() {
     if (!selectedFile || selectedFile.type !== 'file') {
       setFileContent('');
       setFileError(null);
+      setFileLoading(false);
+      return;
+    }
+
+    const fileSize = typeof selectedFile.size === 'number' ? selectedFile.size : null;
+    const isLargeFile = fileSize !== null && fileSize > LARGE_FILE_THRESHOLD;
+    if (isLargeFile && !largeFileAcknowledged) {
+      setFileContent('');
+      setFileError(null);
+      setFileLoading(false);
       return;
     }
 
@@ -260,7 +272,11 @@ export default function App() {
     };
 
     void fetchContent();
-  }, [selectedFile, workspace]);
+  }, [largeFileAcknowledged, selectedFile, workspace]);
+
+  useEffect(() => {
+    setLargeFileAcknowledged(false);
+  }, [selectedFile?.path]);
 
   useEffect(() => {
     persistRecentFiles(workspace, recentFiles);
@@ -658,6 +674,9 @@ export default function App() {
                   loading={fileLoading}
                   error={fileError}
                   workspace={workspace}
+                  largeFileAcknowledged={largeFileAcknowledged}
+                  onLoadLargeFile={() => setLargeFileAcknowledged(true)}
+                  onDownload={handleDownload}
                 />
               ) : currentPath ? (
                 <DirectoryView

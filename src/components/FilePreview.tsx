@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, formatFileSize } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
+import { LARGE_FILE_THRESHOLD } from '@/lib/constants';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
 const MARKDOWN_EXT = ['md', 'markdown'];
@@ -36,7 +37,7 @@ const CODE_LANGUAGE: Record<string, string> = {
   txt: 'text',
 };
 
-const LARGE_FILE_BYTES = 1024 * 1024;
+const LARGE_PREVIEW_BYTES = 1024 * 1024;
 const PREVIEW_CHUNK_CHARS = 200_000;
 
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
@@ -97,9 +98,21 @@ type FilePreviewProps = {
   loading: boolean;
   error?: string | null;
   workspace?: string;
+  largeFileAcknowledged?: boolean;
+  onLoadLargeFile?: (file: FileNode) => void;
+  onDownload?: (file: FileNode) => void;
 };
 
-export default function FilePreview({ file, content, loading, error, workspace }: FilePreviewProps) {
+export default function FilePreview({
+  file,
+  content,
+  loading,
+  error,
+  workspace,
+  largeFileAcknowledged = false,
+  onLoadLargeFile,
+  onDownload,
+}: FilePreviewProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<number | null>(null);
   const scrollPositionsRef = useRef<Map<string, number>>(new Map());
@@ -182,11 +195,10 @@ export default function FilePreview({ file, content, loading, error, workspace }
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
   const canCopy = !isImage && !loading && !error;
   const fileSize = typeof file.size === 'number' ? file.size : null;
-  const isLargeFile = fileSize !== null
-    ? fileSize >= LARGE_FILE_BYTES
-    : content.length >= LARGE_FILE_BYTES;
+  const isLargeFile = fileSize !== null && fileSize > LARGE_FILE_THRESHOLD;
+  const isBlockedByLargeFile = isLargeFile && !largeFileAcknowledged;
   const isTextPreview = !isImage;
-  const shouldTruncate = isTextPreview && isLargeFile;
+  const shouldTruncate = isTextPreview && content.length >= LARGE_PREVIEW_BYTES;
   const isTruncated = shouldTruncate && !showFullContent && content.length > previewLimit;
   const displayContent = isTruncated ? content.slice(0, previewLimit) : content;
 
@@ -255,7 +267,46 @@ export default function FilePreview({ file, content, loading, error, workspace }
         </div>
       </CardHeader>
       <CardContent className="h-[calc(100%-86px)] overflow-hidden">
-        {loading ? (
+        {isBlockedByLargeFile ? (
+          <Card className="border-amber-400/50 bg-amber-500/10">
+            <CardHeader className="space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-amber-100">
+                    <AlertTriangle className="h-4 w-4 text-amber-200" />
+                    Large file warning
+                  </div>
+                  <CardTitle className="text-base text-amber-50">{file.name}</CardTitle>
+                  <div className="text-xs text-amber-100/80">
+                    {fileSize !== null
+                      ? `${formatFileSize(fileSize)}. Loading this file may impact performance.`
+                      : 'Loading this file may impact performance.'}
+                  </div>
+                </div>
+                <Badge variant="outline" className="border-amber-300/60 text-amber-100">
+                  {fileSize !== null ? formatFileSize(fileSize) : 'Large'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => file && onLoadLargeFile?.(file)}
+              >
+                Load Anyway
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => file && onDownload?.(file)}
+              >
+                Download
+              </Button>
+            </CardContent>
+          </Card>
+        ) : loading ? (
           <div className="h-full animate-pulse">
             <div className="h-6 w-full rounded bg-muted/40" />
             <div className="mt-4 space-y-3">
@@ -272,19 +323,6 @@ export default function FilePreview({ file, content, loading, error, workspace }
           <div className="text-sm text-rose-300">{error}</div>
         ) : (
           <>
-            {isLargeFile ? (
-              <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
-                <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-200" />
-                <div className="space-y-1">
-                  <div className="font-semibold text-amber-100">Large file warning</div>
-                  <div className="text-amber-100/80">
-                    {fileSize !== null
-                      ? `This file is ${formatFileSize(fileSize)}. Loading large files may take time or impact performance.`
-                      : 'This file is large. Loading large files may take time or impact performance.'}
-                  </div>
-                </div>
-              </div>
-            ) : null}
             {isImage ? (
           <div className="flex h-full items-center justify-center rounded-lg border border-border bg-background/60 p-4">
             <img
