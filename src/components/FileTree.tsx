@@ -1,23 +1,12 @@
 import { useEffect, useMemo, useRef, useCallback, type FocusEvent, type KeyboardEvent, type MouseEvent } from 'react';
-import { ChevronDown, ChevronRight, File, FileCode2, FileImage, FileText, Folder, FolderOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { getFileIcon } from '@/lib/icons';
 import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
 import type { FileNode } from '@/lib/api';
-
-const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
-const CODE_EXT = ['ts', 'tsx', 'js', 'jsx', 'json', 'css', 'scss', 'md', 'yml', 'yaml', 'py', 'go', 'rs', 'java', 'php', 'sql', 'sh', 'toml'];
-
-const getFileIcon = (name: string) => {
-  const ext = name.split('.').pop()?.toLowerCase();
-  if (!ext) return File;
-  if (IMAGE_EXT.includes(ext)) return FileImage;
-  if (ext === 'md') return FileText;
-  if (CODE_EXT.includes(ext)) return FileCode2;
-  return File;
-};
 
 type FileTreeProps = {
   nodes: FileNode[];

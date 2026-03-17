@@ -12,12 +12,13 @@ import {
 
 import Breadcrumbs, { type BreadcrumbItem } from '@/components/Breadcrumbs';
 import ContextMenu from '@/components/ContextMenu';
+import DirectoryView from '@/components/DirectoryView';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { buildWorkspaceFileUrl, fetchFileContent, listDirectory, type FileNode } from '@/lib/api';
@@ -290,7 +291,7 @@ export default function App() {
 
   const handleSelect = (node: FileNode) => {
     if (node.type === 'dir') {
-      setCurrentPath(node.path);
+      handleNavigate(node.path);
     } else {
       setSelectedFile(node);
       setCurrentPath(getParentPath(node.path));
@@ -311,13 +312,30 @@ export default function App() {
   };
 
   const breadcrumbs = useMemo(() => buildBreadcrumbs(currentPath), [currentPath]);
+  const currentDirectory = useMemo(
+    () => (currentPath ? findNode(tree, currentPath) : null),
+    [currentPath, tree]
+  );
 
   const handleNavigate = (p: string) => {
+    setSelectedFile(null);
     setCurrentPath(p);
     const next = new Set(openNodes);
     if (p) next.add(p);
     setOpenNodes(next);
+    const target = findNode(tree, p);
+    if (target?.type === 'dir' && target.children === undefined && !loadingNodes.has(p)) {
+      void loadDirectory(p);
+    }
   };
+
+  useEffect(() => {
+    if (!currentPath || selectedFile) return;
+    const target = findNode(tree, currentPath);
+    if (target?.type === 'dir' && target.children === undefined && !loadingNodes.has(currentPath)) {
+      void loadDirectory(currentPath);
+    }
+  }, [currentPath, loadDirectory, loadingNodes, selectedFile, tree]);
 
   const handleDrawerTouchStart = (event: TouchEvent<HTMLElement>) => {
     drawerTouchStartX.current = event.touches[0]?.clientX ?? null;
@@ -633,13 +651,39 @@ export default function App() {
             </Card>
 
             <div className="flex-1 overflow-hidden">
-              <FilePreview
-                file={selectedFile}
-                content={fileContent}
-                loading={fileLoading}
-                error={fileError}
-                workspace={workspace}
-              />
+              {selectedFile ? (
+                <FilePreview
+                  file={selectedFile}
+                  content={fileContent}
+                  loading={fileLoading}
+                  error={fileError}
+                  workspace={workspace}
+                />
+              ) : currentPath ? (
+                <DirectoryView
+                  path={currentPath}
+                  entries={currentDirectory?.children ?? []}
+                  loading={
+                    loadingNodes.has(currentPath) || currentDirectory?.children === undefined
+                  }
+                  onOpenFile={(node) => handleSelect(node)}
+                  onOpenDirectory={(node) => handleNavigate(node.path)}
+                />
+              ) : (
+                <Card className="flex h-full flex-col items-center justify-center bg-card/80">
+                  <CardContent className="flex flex-col items-center justify-center gap-4 p-8 text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                      <FolderTree className="h-7 w-7 text-primary" />
+                    </div>
+                    <div className="space-y-1">
+                      <CardTitle className="text-lg font-semibold">Select a folder</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Choose a directory to explore its contents or open a file preview.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </div>
