@@ -3,12 +3,12 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { Check, Copy, FileCode2, FileImage, FileText } from 'lucide-react';
+import { AlertTriangle, Check, Copy, FileCode2, FileImage, FileText } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn, formatFileSize } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
@@ -35,6 +35,9 @@ const CODE_LANGUAGE: Record<string, string> = {
   toml: 'toml',
   txt: 'text',
 };
+
+const LARGE_FILE_BYTES = 1024 * 1024;
+const PREVIEW_CHUNK_CHARS = 200_000;
 
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
 
@@ -101,6 +104,8 @@ export default function FilePreview({ file, content, loading, error, workspace }
   const copyTimeoutRef = useRef<number | null>(null);
   const scrollPositionsRef = useRef<Map<string, number>>(new Map());
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
+  const [previewLimit, setPreviewLimit] = useState(PREVIEW_CHUNK_CHARS);
+  const [showFullContent, setShowFullContent] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -176,6 +181,27 @@ export default function FilePreview({ file, content, loading, error, workspace }
   const language = CODE_LANGUAGE[ext] ?? 'text';
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
   const canCopy = !isImage && !loading && !error;
+  const fileSize = typeof file.size === 'number' ? file.size : null;
+  const isLargeFile = fileSize !== null
+    ? fileSize >= LARGE_FILE_BYTES
+    : content.length >= LARGE_FILE_BYTES;
+  const isTextPreview = !isImage;
+  const shouldTruncate = isTextPreview && isLargeFile;
+  const isTruncated = shouldTruncate && !showFullContent && content.length > previewLimit;
+  const displayContent = isTruncated ? content.slice(0, previewLimit) : content;
+
+  useEffect(() => {
+    if (!file?.path) {
+      return;
+    }
+    if (!shouldTruncate) {
+      setShowFullContent(true);
+      setPreviewLimit(PREVIEW_CHUNK_CHARS);
+      return;
+    }
+    setShowFullContent(false);
+    setPreviewLimit(PREVIEW_CHUNK_CHARS);
+  }, [file?.path, shouldTruncate]);
 
   const handleCopy = async () => {
     if (!canCopy) {
@@ -196,6 +222,14 @@ export default function FilePreview({ file, content, loading, error, workspace }
     }
   };
 
+  const handleLoadMore = () => {
+    setPreviewLimit((prev) => Math.min(prev + PREVIEW_CHUNK_CHARS, content.length));
+  };
+
+  const handleShowFull = () => {
+    setShowFullContent(true);
+  };
+
   return (
     <Card className="h-full max-w-[100vw] overflow-hidden bg-card/80">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -208,7 +242,17 @@ export default function FilePreview({ file, content, loading, error, workspace }
             <div className="text-xs text-muted-foreground">{file.path}</div>
           </div>
         </div>
-        <Badge variant="accent">{ext || 'file'}</Badge>
+        <div className="flex items-center gap-2">
+          {isTruncated ? (
+            <Badge
+              variant="outline"
+              className="border-amber-400/60 text-amber-200"
+            >
+              Truncated
+            </Badge>
+          ) : null}
+          <Badge variant="accent">{ext || 'file'}</Badge>
+        </div>
       </CardHeader>
       <CardContent className="h-[calc(100%-86px)] overflow-hidden">
         {loading ? (
@@ -226,7 +270,22 @@ export default function FilePreview({ file, content, loading, error, workspace }
           </div>
         ) : error ? (
           <div className="text-sm text-rose-300">{error}</div>
-        ) : isImage ? (
+        ) : (
+          <>
+            {isLargeFile ? (
+              <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-200" />
+                <div className="space-y-1">
+                  <div className="font-semibold text-amber-100">Large file warning</div>
+                  <div className="text-amber-100/80">
+                    {fileSize !== null
+                      ? `This file is ${formatFileSize(fileSize)}. Loading large files may take time or impact performance.`
+                      : 'This file is large. Loading large files may take time or impact performance.'}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {isImage ? (
           <div className="flex h-full items-center justify-center rounded-lg border border-border bg-background/60 p-4">
             <img
               src={previewUrl}
@@ -234,7 +293,7 @@ export default function FilePreview({ file, content, loading, error, workspace }
               className="max-h-[70vh] max-w-full rounded-lg shadow-soft"
             />
           </div>
-        ) : isMarkdown ? (
+            ) : isMarkdown ? (
           <div
             ref={previewScrollRef}
             onScroll={handlePreviewScroll}
@@ -262,17 +321,32 @@ export default function FilePreview({ file, content, loading, error, workspace }
               </Button>
             ) : null}
             <div className="markdown-content prose prose-sm prose-invert max-w-none break-words prose-code:break-words prose-code:break-all prose-code:whitespace-pre-wrap prose-pre:break-words prose-pre:whitespace-pre-wrap">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                code: MarkdownCode,
-              }}
-            >
-              {content}
-            </ReactMarkdown>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code: MarkdownCode,
+                }}
+              >
+                {displayContent}
+              </ReactMarkdown>
             </div>
+            {isTruncated ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                <span>
+                  Preview truncated. Showing {displayContent.length.toLocaleString()} of {content.length.toLocaleString()} characters.
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={handleLoadMore}>
+                    Load more
+                  </Button>
+                  <Button type="button" size="sm" onClick={handleShowFull}>
+                    Show full file
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
-        ) : (
+            ) : (
           <div
             ref={previewScrollRef}
             onScroll={handlePreviewScroll}
@@ -315,9 +389,26 @@ export default function FilePreview({ file, content, loading, error, workspace }
                 overflowWrap: 'break-word',
               }}
             >
-              {content}
+              {displayContent}
             </SyntaxHighlighter>
+            {isTruncated ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                <span>
+                  Preview truncated. Showing {displayContent.length.toLocaleString()} of {content.length.toLocaleString()} characters.
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={handleLoadMore}>
+                    Load more
+                  </Button>
+                  <Button type="button" size="sm" onClick={handleShowFull}>
+                    Show full file
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
