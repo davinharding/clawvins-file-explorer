@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,37 @@ type ContextMenuProps = {
 
 export default function ContextMenu({ items, position, onClose, className }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState(position);
+  const [isMeasured, setIsMeasured] = useState(false);
+
+  useLayoutEffect(() => {
+    if (!menuRef.current) return;
+
+    const margin = 8;
+    const { width: menuWidth, height: menuHeight } = menuRef.current.getBoundingClientRect();
+
+    let left = position.x;
+    let top = position.y;
+
+    if (left + menuWidth > window.innerWidth - margin) {
+      left = position.x - menuWidth;
+    }
+
+    if (top + menuHeight > window.innerHeight - margin) {
+      top = position.y - menuHeight;
+    }
+
+    left = Math.min(Math.max(left, margin), window.innerWidth - menuWidth - margin);
+    top = Math.min(Math.max(top, margin), window.innerHeight - menuHeight - margin);
+
+    setMenuPosition({ x: left, y: top });
+    setIsMeasured(true);
+  }, [position.x, position.y, items]);
+
+  useEffect(() => {
+    setMenuPosition(position);
+    setIsMeasured(false);
+  }, [position.x, position.y]);
 
   useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
@@ -48,8 +79,12 @@ export default function ContextMenu({ items, position, onClose, className }: Con
     <div
       ref={menuRef}
       role="menu"
-      className={cn('fixed z-50 min-w-[180px] rounded-lg border border-border bg-card p-1 shadow-lg', className)}
-      style={{ left: position.x, top: position.y }}
+      className={cn(
+        'fixed z-50 min-w-[180px] rounded-lg border border-border bg-card p-1 shadow-lg transition-opacity',
+        isMeasured ? 'opacity-100' : 'opacity-0',
+        className
+      )}
+      style={{ left: menuPosition.x, top: menuPosition.y }}
     >
       {items.map((item) => (
         <button
