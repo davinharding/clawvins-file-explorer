@@ -119,6 +119,7 @@ export default function FilePreview({
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const [previewLimit, setPreviewLimit] = useState(PREVIEW_CHUNK_CHARS);
   const [showFullContent, setShowFullContent] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -129,6 +130,10 @@ export default function FilePreview({
   }, []);
   useEffect(() => {
     setCopied(false);
+  }, [file?.path]);
+
+  useEffect(() => {
+    setImageLoaded(false);
   }, [file?.path]);
 
   useEffect(() => {
@@ -323,13 +328,21 @@ export default function FilePreview({
           <div className="text-sm text-rose-300">{error}</div>
         ) : (
           <>
-            {isImage ? (
-          <div className="flex h-full items-center justify-center rounded-lg border border-border bg-background/60 p-4">
-            <img
-              src={previewUrl}
-              alt={file.name}
-              className="max-h-[70vh] max-w-full rounded-lg shadow-soft"
-            />
+                        {isImage ? (
+          <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-background/60 p-4">
+            {!imageLoaded ? <div className="absolute inset-4 animate-pulse rounded-lg bg-muted/40 blur-sm" /> : null}
+            <div className="flex h-full w-full items-center justify-center overflow-auto">
+              <img
+                src={previewUrl}
+                alt={file.name}
+                loading="lazy"
+                onLoad={() => setImageLoaded(true)}
+                className={cn(
+                  "h-full w-full rounded-lg object-contain shadow-soft transition-opacity duration-200",
+                  imageLoaded ? "opacity-100" : "opacity-0"
+                )}
+              />
+            </div>
           </div>
             ) : isMarkdown ? (
           <div
