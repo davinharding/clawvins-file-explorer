@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Folder } from 'lucide-react';
+import { ArrowDown, ArrowUp, Folder, LayoutGrid, List } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +25,10 @@ type DirectoryViewProps = {
 
 type SortField = 'name' | 'size' | 'modified' | 'type';
 type SortDir = 'asc' | 'desc';
+type ViewMode = 'grid' | 'list';
 
 const SORT_STORAGE_KEY = 'fe_dir_sort';
+const VIEW_MODE_STORAGE_KEY = 'fe_dir_view_mode';
 
 const sortButtons: { field: SortField; label: string }[] = [
   { field: 'name', label: 'Name' },
@@ -44,6 +46,7 @@ export default function DirectoryView({
 }: DirectoryViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   useEffect(() => {
     try {
@@ -65,9 +68,24 @@ export default function DirectoryView({
 
   useEffect(() => {
     try {
+      const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      if (stored === 'grid' || stored === 'list') {
+        setViewMode(stored);
+      }
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => {
+    try {
       localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ field: sortField, direction: sortDir }));
     } catch (_) {}
   }, [sortDir, sortField]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    } catch (_) {}
+  }, [viewMode]);
 
   const sortedEntries = useMemo(() => {
     const getExtension = (name: string) => {
@@ -131,27 +149,57 @@ export default function DirectoryView({
       <CardContent className="flex-1 pt-0">
         <ScrollArea className="h-full">
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            {sortButtons.map((button) => {
-              const isActive = button.field === sortField;
-              const DirectionIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
+            <div className="flex flex-wrap items-center gap-2">
+              {sortButtons.map((button) => {
+                const isActive = button.field === sortField;
+                const DirectionIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
 
-              return (
-                <Button
-                  key={button.field}
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onSortClick(button.field)}
-                  className={cn(
-                    'rounded-full px-3',
-                    isActive ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
-                  )}
-                >
-                  {button.label}
-                  {isActive ? <DirectionIcon className="h-3.5 w-3.5" /> : null}
-                </Button>
-              );
-            })}
+                return (
+                  <Button
+                    key={button.field}
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSortClick(button.field)}
+                    className={cn(
+                      'rounded-full px-3',
+                      isActive ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
+                    )}
+                  >
+                    {button.label}
+                    {isActive ? <DirectionIcon className="h-3.5 w-3.5" /> : null}
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="ml-auto flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewMode('grid')}
+                className={cn(
+                  'h-8 w-8 rounded-full',
+                  viewMode === 'grid' ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
+                )}
+                aria-label="Grid view"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewMode('list')}
+                className={cn(
+                  'h-8 w-8 rounded-full',
+                  viewMode === 'list' ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
+                )}
+                aria-label="List view"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           {loading ? (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -178,7 +226,7 @@ export default function DirectoryView({
                 <p className="text-xs text-muted-foreground">Add files to see them here.</p>
               </div>
             </div>
-          ) : (
+          ) : viewMode === 'grid' ? (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {sortedEntries.map((node) => {
                 const Icon = node.type === 'dir' ? Folder : getFileIcon(node.name);
@@ -213,6 +261,41 @@ export default function DirectoryView({
                         {metaLabel}
                       </span>
                     </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {sortedEntries.map((node) => {
+                const Icon = node.type === 'dir' ? Folder : getFileIcon(node.name);
+                const sizeLabel = node.type === 'file' ? formatFileSize(node.size) : '—';
+                const timeLabel = formatRelativeTime(node.mtime) || '—';
+
+                return (
+                  <button
+                    key={node.path}
+                    type="button"
+                    onClick={() =>
+                      node.type === 'dir' ? onOpenDirectory(node) : onOpenFile(node)
+                    }
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-muted/50"
+                    title={node.path}
+                  >
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60">
+                      <Icon
+                        className={
+                          node.type === 'dir'
+                            ? 'h-4 w-4 text-primary'
+                            : 'h-4 w-4 text-muted-foreground'
+                        }
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                      {node.name}
+                    </span>
+                    <span className="w-16 text-right text-xs text-muted-foreground">{sizeLabel}</span>
+                    <span className="w-16 text-right text-xs text-muted-foreground">{timeLabel}</span>
                   </button>
                 );
               })}
