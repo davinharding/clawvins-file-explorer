@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { getFileIcon } from '@/lib/icons';
 import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
-import type { FileNode } from '@/lib/api';
+import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
+import { IMAGE_EXT } from '@/lib/constants';
 
 const getMetaLabel = (sizeLabel: string, timeLabel: string) => {
   if (!sizeLabel && !timeLabel) return '—';
@@ -21,6 +22,7 @@ type DirectoryViewProps = {
   loading?: boolean;
   onOpenFile: (node: FileNode) => void;
   onOpenDirectory: (node: FileNode) => void;
+  workspace?: string;
 };
 
 type SortField = 'name' | 'size' | 'modified' | 'type';
@@ -29,6 +31,12 @@ type ViewMode = 'grid' | 'list';
 
 const SORT_STORAGE_KEY = 'fe_dir_sort';
 const VIEW_MODE_STORAGE_KEY = 'fe_dir_view_mode';
+
+
+const isImageFile = (filename: string): boolean => {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  return ext ? IMAGE_EXT.includes(ext) : false;
+};
 
 const sortButtons: { field: SortField; label: string }[] = [
   { field: 'name', label: 'Name' },
@@ -43,6 +51,7 @@ export default function DirectoryView({
   loading,
   onOpenFile,
   onOpenDirectory,
+  workspace,
 }: DirectoryViewProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
@@ -244,13 +253,30 @@ export default function DirectoryView({
                     className="group flex w-full items-start gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4 text-left transition hover:bg-muted/50"
                     title={node.path}
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 overflow-hidden">
+                      {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                        <img
+                          src={buildWorkspaceFileUrl(node.path, workspace)}
+                          alt={node.name}
+                          className="h-10 w-10 object-cover rounded-xl"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const icon = target.nextElementSibling as HTMLElement;
+                            if (icon) icon.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
                       <Icon
                         className={
                           node.type === 'dir'
                             ? 'h-5 w-5 text-primary'
                             : 'h-5 w-5 text-muted-foreground'
                         }
+                        style={{
+                          display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
+                        }}
                       />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -282,13 +308,30 @@ export default function DirectoryView({
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-muted/50"
                     title={node.path}
                   >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60 overflow-hidden">
+                      {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                        <img
+                          src={buildWorkspaceFileUrl(node.path, workspace)}
+                          alt={node.name}
+                          className="h-8 w-8 object-cover rounded-md"
+                          loading="lazy"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            const icon = target.nextElementSibling as HTMLElement;
+                            if (icon) icon.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
                       <Icon
                         className={
                           node.type === 'dir'
                             ? 'h-4 w-4 text-primary'
                             : 'h-4 w-4 text-muted-foreground'
                         }
+                        style={{
+                          display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
+                        }}
                       />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">

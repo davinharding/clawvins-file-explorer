@@ -687,6 +687,7 @@ export default function App() {
                   }
                   onOpenFile={(node) => handleSelect(node)}
                   onOpenDirectory={(node) => handleNavigate(node.path)}
+                  workspace={workspace}
                 />
               ) : (
                 <Card className="flex h-full flex-col items-center justify-center bg-card/80">
