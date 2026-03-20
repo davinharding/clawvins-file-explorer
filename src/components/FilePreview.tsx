@@ -8,7 +8,7 @@ import { AlertTriangle, Check, Copy, FileCode2, FileImage, FileText } from 'luci
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn, formatFileSize } from '@/lib/utils';
+import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
 import { LARGE_FILE_THRESHOLD } from '@/lib/constants';
 
@@ -268,6 +268,13 @@ export default function FilePreview({
               Truncated
             </Badge>
           ) : null}
+          {(file.size != null || file.mtime != null) && (
+            <div className="text-xs text-muted-foreground">
+              {file.size != null && formatFileSize(file.size)}
+              {file.size != null && file.mtime != null && ' · '}
+              {file.mtime != null && formatRelativeTime(file.mtime)}
+            </div>
+          )}
           <Badge variant="accent">{ext || 'file'}</Badge>
         </div>
       </CardHeader>
