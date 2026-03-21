@@ -16,6 +16,7 @@ import DirectoryView from '@/components/DirectoryView';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
+import ShortcutHelp from '@/components/ShortcutHelp';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
@@ -133,6 +134,7 @@ export default function App() {
     window.matchMedia('(max-width: 767px)').matches
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [shortcutHelpOpen, setShortcutHelpOpen] = useState<boolean>(false);
   const drawerTouchStartX = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const inMemoryRecents = useRef<Map<string, FileNode[]>>(new Map());
@@ -216,9 +218,24 @@ export default function App() {
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
+      const activeElement = document.activeElement;
+      const isTypingTarget =
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement ||
+        (activeElement instanceof HTMLElement && activeElement.isContentEditable);
+
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
         searchInputRef.current?.focus();
+        return;
+      }
+
+      if (isTypingTarget) return;
+
+      if (event.key === '?') {
+        event.preventDefault();
+        setShortcutHelpOpen(true);
       }
     };
     window.addEventListener('keydown', handleShortcut);
