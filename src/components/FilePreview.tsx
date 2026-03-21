@@ -196,6 +196,7 @@ export default function FilePreview({
   const ext = getExt(file.name);
   const isImage = IMAGE_EXT.includes(ext);
   const isMarkdown = MARKDOWN_EXT.includes(ext);
+  const isPdf = ext === "pdf";
   const language = CODE_LANGUAGE[ext] ?? 'text';
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
   const canCopy = !isImage && !loading && !error;
@@ -335,7 +336,14 @@ export default function FilePreview({
           <div className="text-sm text-rose-300">{error}</div>
         ) : (
           <>
-                        {isImage ? (
+                        {isPdf ? (
+          <iframe
+            src={previewUrl}
+            className="h-full w-full rounded-lg"
+            style={{ minHeight: "70vh" }}
+            title={file.name}
+          />
+        ) : isImage ? (
           <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-background/60 p-4">
             {!imageLoaded ? <div className="absolute inset-4 animate-pulse rounded-lg bg-muted/40 blur-sm" /> : null}
             <div className="flex h-full w-full items-center justify-center overflow-auto">
