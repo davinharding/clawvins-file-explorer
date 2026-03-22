@@ -3,14 +3,14 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { AlertTriangle, Check, Copy, FileCode2, FileImage, FileText } from 'lucide-react';
+import { AlertTriangle, Check, Copy, FileAudio, FileCode2, FileImage, FileText, FileVideo } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
-import { LARGE_FILE_THRESHOLD } from '@/lib/constants';
+import { AUDIO_EXT, LARGE_FILE_THRESHOLD, VIDEO_EXT } from '@/lib/constants';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
 const MARKDOWN_EXT = ['md', 'markdown'];
@@ -196,14 +196,16 @@ export default function FilePreview({
   const ext = getExt(file.name);
   const isImage = IMAGE_EXT.includes(ext);
   const isMarkdown = MARKDOWN_EXT.includes(ext);
-  const isPdf = ext === "pdf";
+  const isPdf = ext === 'pdf';
+  const isAudio = AUDIO_EXT.includes(ext);
+  const isVideo = VIDEO_EXT.includes(ext);
   const language = CODE_LANGUAGE[ext] ?? 'text';
   const previewUrl = buildWorkspaceFileUrl(file.path, workspace);
-  const canCopy = !isImage && !loading && !error;
+  const canCopy = !isImage && !isAudio && !isVideo && !loading && !error;
   const fileSize = typeof file.size === 'number' ? file.size : null;
   const isLargeFile = fileSize !== null && fileSize > LARGE_FILE_THRESHOLD;
   const isBlockedByLargeFile = isLargeFile && !largeFileAcknowledged;
-  const isTextPreview = !isImage;
+  const isTextPreview = !isImage && !isAudio && !isVideo;
   const shouldTruncate = isTextPreview && content.length >= LARGE_PREVIEW_BYTES;
   const isTruncated = shouldTruncate && !showFullContent && content.length > previewLimit;
   const displayContent = isTruncated ? content.slice(0, previewLimit) : content;
@@ -253,8 +255,10 @@ export default function FilePreview({
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           {isImage ? <FileImage className="h-5 w-5 text-primary" /> : null}
-          {!isImage && isMarkdown ? <FileText className="h-5 w-5 text-primary" /> : null}
-          {!isImage && !isMarkdown ? <FileCode2 className="h-5 w-5 text-primary" /> : null}
+          {!isImage && isAudio ? <FileAudio className="h-5 w-5 text-primary" /> : null}
+          {!isImage && !isAudio && isVideo ? <FileVideo className="h-5 w-5 text-primary" /> : null}
+          {!isImage && !isAudio && !isVideo && isMarkdown ? <FileText className="h-5 w-5 text-primary" /> : null}
+          {!isImage && !isAudio && !isVideo && !isMarkdown ? <FileCode2 className="h-5 w-5 text-primary" /> : null}
           <div>
             <CardTitle className="text-lg">{file.name}</CardTitle>
             <div className="text-xs text-muted-foreground">{file.path}</div>
@@ -337,13 +341,13 @@ export default function FilePreview({
         ) : (
           <>
                         {isPdf ? (
-          <iframe
-            src={previewUrl}
-            className="h-full w-full rounded-lg"
-            style={{ minHeight: "70vh" }}
-            title={file.name}
-          />
-        ) : isImage ? (
+              <iframe
+                src={previewUrl}
+                className="h-full w-full rounded-lg"
+                style={{ minHeight: '70vh' }}
+                title={file.name}
+              />
+            ) : isImage ? (
           <div className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-background/60 p-4">
             {!imageLoaded ? <div className="absolute inset-4 animate-pulse rounded-lg bg-muted/40 blur-sm" /> : null}
             <div className="flex h-full w-full items-center justify-center overflow-auto">
@@ -359,6 +363,23 @@ export default function FilePreview({
               />
             </div>
           </div>
+            ) : isAudio ? (
+              <div className="flex h-full items-center rounded-lg border border-border bg-background/60 p-4">
+                <audio src={previewUrl} controls className="w-full" preload="metadata">
+                  Your browser does not support audio playback.
+                </audio>
+              </div>
+            ) : isVideo ? (
+              <div className="flex h-full items-center justify-center rounded-lg border border-border bg-background/60 p-4">
+                <video
+                  src={previewUrl}
+                  controls
+                  className="max-h-[70vh] w-full rounded-lg"
+                  preload="metadata"
+                >
+                  Your browser does not support video playback.
+                </video>
+              </div>
             ) : isMarkdown ? (
           <div
             ref={previewScrollRef}
@@ -412,13 +433,13 @@ export default function FilePreview({
               </div>
             ) : null}
           </div>
-            ) : (
+            ) : isTextPreview ? (
           <div
             ref={previewScrollRef}
             onScroll={handlePreviewScroll}
             className={cn(
               'file-preview-code group relative max-h-[70vh] max-w-full overflow-y-auto overflow-x-hidden rounded-lg border border-border bg-background/60 p-4',
-              language === 'text' ? '' : ''
+              language === 'text' ? '' : '' 
             )}
           >
             {canCopy ? (
@@ -473,7 +494,7 @@ export default function FilePreview({
               </div>
             ) : null}
           </div>
-            )}
+            ) : null}
           </>
         )}
       </CardContent>
