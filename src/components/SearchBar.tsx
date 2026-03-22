@@ -10,9 +10,10 @@ interface SearchBarProps {
   placeholder?: string;
   className?: string;
   inputRef?: Ref<HTMLInputElement>;
+  matchCount?: number;
 }
 
-export default function SearchBar({ value, onChange, placeholder, className, inputRef }: SearchBarProps) {
+export default function SearchBar({ value, onChange, placeholder, className, inputRef, matchCount }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const localRef = useRef<HTMLInputElement>(null);
   const isMac = useMemo(() => {
@@ -50,6 +51,11 @@ export default function SearchBar({ value, onChange, placeholder, className, inp
         <kbd className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
           {isMac ? 'Cmd+K' : 'Ctrl+K'}
         </kbd>
+      )}
+      {value && typeof matchCount === 'number' && matchCount > 0 && (
+        <span className="pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 rounded border border-border bg-muted/70 px-2 py-0.5 text-[11px] text-muted-foreground">
+          {matchCount} {matchCount === 1 ? 'match' : 'matches'}
+        </span>
       )}
       {value && (
         <button

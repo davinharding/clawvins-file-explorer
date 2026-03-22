@@ -300,6 +300,14 @@ export default function App() {
   }, [persistRecentFiles, recentFiles, workspace]);
 
   const filteredTree = useMemo(() => filterTree(tree, search), [tree, search]);
+  const searchMatchCount = useMemo(() => {
+    const countNodes = (nodes: FileNode[]): number => nodes.reduce((total, node) => (
+      total + 1 + (node.children ? countNodes(node.children) : 0)
+    ), 0);
+
+    if (!search.trim()) return 0;
+    return countNodes(filteredTree);
+  }, [filteredTree, search]);
   const searchOpenNodes = useMemo(() => {
     if (!search) return openNodes;
     const all = new Set<string>();
@@ -447,7 +455,7 @@ export default function App() {
           ) : null}
         </div>
       </div>
-      <SearchBar value={search} onChange={setSearch} inputRef={searchInputRef} />
+      <SearchBar value={search} onChange={setSearch} inputRef={searchInputRef} matchCount={searchMatchCount} />
       {recentFiles.length > 0 ? (
         <div className="mt-3">
           <div className="mb-2 flex items-center justify-between">
@@ -521,6 +529,7 @@ export default function App() {
             onSelect={handleSelect}
             onFocusPathChange={setFocusedPath}
             onContextMenu={handleContextMenu}
+            searchQuery={search}
           />
         )}
       </ScrollArea>

@@ -18,6 +18,7 @@ type FileTreeProps = {
   onSelect: (node: FileNode) => void;
   onFocusPathChange: (path: string | null) => void;
   onContextMenu?: (node: FileNode, position: { x: number; y: number }) => void;
+  searchQuery?: string;
 };
 
 type VisibleNode = {
@@ -52,6 +53,7 @@ export default function FileTree({
   onSelect,
   onFocusPathChange,
   onContextMenu,
+  searchQuery,
 }: FileTreeProps) {
   const visibleNodes = useMemo(() => buildVisibleNodes(nodes, openNodes), [nodes, openNodes]);
   const indexByPath = useMemo(
@@ -59,6 +61,31 @@ export default function FileTree({
     [visibleNodes]
   );
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const renderHighlightedName = useCallback(
+    (name: string) => {
+      const query = searchQuery?.trim();
+      if (!query) return name;
+
+      const lowerName = name.toLowerCase();
+      const lowerQuery = query.toLowerCase();
+      const start = lowerName.indexOf(lowerQuery);
+
+      if (start < 0) return name;
+
+      const end = start + query.length;
+      return (
+        <>
+          {name.slice(0, start)}
+          <span className="bg-primary/30 text-foreground rounded-sm px-0.5">
+            {name.slice(start, end)}
+          </span>
+          {name.slice(end)}
+        </>
+      );
+    },
+    [searchQuery]
+  );
 
   useEffect(() => {
     if (visibleNodes.length === 0) {
@@ -261,7 +288,7 @@ export default function FileTree({
                           <ChevronRight className="h-4 w-4" />
                         )}
                         <Icon className="h-4 w-4 text-primary" />
-                        <span className="truncate font-semibold text-foreground">{node.name}</span>
+                        <span className="truncate font-semibold text-foreground">{renderHighlightedName(node.name)}</span>
                         {isLoading ? <Badge variant="outline">Loading</Badge> : null}
                         {(() => {
                           const countLabel = typeof node.childCount === 'number' && node.childCount > 0
@@ -303,7 +330,7 @@ export default function FileTree({
                 {...commonButtonProps}
               >
                 <Icon className="h-4 w-4" />
-                <span className="truncate">{node.name}</span>
+                <span className="truncate">{renderHighlightedName(node.name)}</span>
                 {(() => {
                   const sizeLabel = typeof node.size === 'number' ? formatFileSize(node.size) : '';
                   const meta = sizeLabel && relativeTime
