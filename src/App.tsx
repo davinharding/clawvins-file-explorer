@@ -13,6 +13,7 @@ import {
 import Breadcrumbs, { type BreadcrumbItem } from '@/components/Breadcrumbs';
 import ContextMenu from '@/components/ContextMenu';
 import DirectoryView from '@/components/DirectoryView';
+import DropZone from '@/components/DropZone';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
@@ -705,16 +706,22 @@ export default function App() {
                   onDownload={handleDownload}
                 />
               ) : currentPath ? (
-                <DirectoryView
+                <DropZone
                   path={currentPath}
-                  entries={currentDirectory?.children ?? []}
-                  loading={
-                    loadingNodes.has(currentPath) || currentDirectory?.children === undefined
-                  }
-                  onOpenFile={(node) => handleSelect(node)}
-                  onOpenDirectory={(node) => handleNavigate(node.path)}
                   workspace={workspace}
-                />
+                  onUploadSuccess={handleRefresh}
+                >
+                  <DirectoryView
+                    path={currentPath}
+                    entries={currentDirectory?.children ?? []}
+                    loading={
+                      loadingNodes.has(currentPath) || currentDirectory?.children === undefined
+                    }
+                    onOpenFile={(node) => handleSelect(node)}
+                    onOpenDirectory={(node) => handleNavigate(node.path)}
+                    workspace={workspace}
+                  />
+                </DropZone>
               ) : (
                 <Card className="flex h-full flex-col items-center justify-center bg-card/80">
                   <CardContent className="flex flex-col items-center justify-center gap-4 p-8 text-center">

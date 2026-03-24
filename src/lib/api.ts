@@ -10,6 +10,12 @@ export type FileNode = {
   childCount?: number;
 };
 
+export type UploadedFile = {
+  name: string;
+  path: string;
+  size: number;
+};
+
 type ApiTreeResponse = FileNode[] | { tree?: FileNode[]; entries?: FileNode[]; files?: FileNode[] };
 
 type ApiContentResponse =
@@ -97,4 +103,35 @@ export function buildWorkspaceFileUrl(filePath: string, workspace = 'workspace')
   const token = getToken();
   const tokenParam = token ? `?token=${encodeURIComponent(token)}` : '';
   return `/ws/${encodeURIComponent(workspace)}/${filePath}${tokenParam}`;
+}
+
+export async function uploadFiles(
+  files: File[],
+  path = '',
+  workspace = 'workspace'
+): Promise<{ uploaded: UploadedFile[] }> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append('files', file, file.name);
+  });
+
+  const url = `/api/files/upload?path=${encodeURIComponent(path)}&workspace=${encodeURIComponent(workspace)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let message = `Upload failed (${res.status})`;
+    try {
+      const payload = (await res.json()) as { error?: string };
+      if (payload?.error) message = payload.error;
+    } catch {
+      // Ignore JSON parse errors and keep fallback status message.
+    }
+    throw new Error(message);
+  }
+
+  return (await res.json()) as { uploaded: UploadedFile[] };
 }
