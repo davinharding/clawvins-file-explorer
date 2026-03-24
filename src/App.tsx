@@ -733,6 +733,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        {shortcutHelpOpen && <ShortcutHelp onClose={() => setShortcutHelpOpen(false)} />}
       </div>
     </div>
   );
