@@ -331,10 +331,35 @@ export default function App() {
     setOpenNodes(next);
   };
 
-  const handleSelect = (node: FileNode) => {
+  const expandAncestors = useCallback(
+    async (filePath: string) => {
+      const parts = filePath.split('/');
+      if (parts.length <= 1) return;
+
+      for (let i = 1; i < parts.length; i += 1) {
+        const ancestorPath = parts.slice(0, i).join('/');
+
+        setOpenNodes((prev) => {
+          const next = new Set(prev);
+          next.add(ancestorPath);
+          return next;
+        });
+
+        const ancestorNode = findNode(tree, ancestorPath);
+        if (ancestorNode?.type === 'dir' && ancestorNode.children === undefined) {
+          // eslint-disable-next-line no-await-in-loop
+          await loadDirectory(ancestorPath);
+        }
+      }
+    },
+    [loadDirectory, tree]
+  );
+
+  const handleSelect = async (node: FileNode) => {
     if (node.type === 'dir') {
       handleNavigate(node.path);
     } else {
+      await expandAncestors(node.path);
       setSelectedFile(node);
       setCurrentPath(getParentPath(node.path));
     }
