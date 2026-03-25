@@ -10,32 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
 import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
-import { AUDIO_EXT, LARGE_FILE_THRESHOLD, VIDEO_EXT } from '@/lib/constants';
-
-const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
-const MARKDOWN_EXT = ['md', 'markdown'];
-const CODE_LANGUAGE: Record<string, string> = {
-  ts: 'typescript',
-  tsx: 'tsx',
-  js: 'javascript',
-  jsx: 'jsx',
-  json: 'json',
-  css: 'css',
-  scss: 'scss',
-  html: 'html',
-  md: 'markdown',
-  yml: 'yaml',
-  yaml: 'yaml',
-  py: 'python',
-  go: 'go',
-  rs: 'rust',
-  java: 'java',
-  php: 'php',
-  sql: 'sql',
-  sh: 'bash',
-  toml: 'toml',
-  txt: 'text',
-};
+import { AUDIO_EXT, CODE_LANGUAGE, IMAGE_EXT, LARGE_FILE_THRESHOLD, MARKDOWN_EXT, VIDEO_EXT } from '@/lib/constants';
 
 const LARGE_PREVIEW_BYTES = 1024 * 1024;
 const PREVIEW_CHUNK_CHARS = 200_000;

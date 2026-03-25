@@ -1,9 +1,6 @@
 import { File, FileAudio, FileCode2, FileImage, FileText, FileVideo } from 'lucide-react';
 
-export const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
-export const CODE_EXT = ['ts', 'tsx', 'js', 'jsx', 'json', 'css', 'scss', 'md', 'yml', 'yaml', 'py', 'go', 'rs', 'java', 'php', 'sql', 'sh', 'toml'];
-export const AUDIO_EXT = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
-export const VIDEO_EXT = ['mp4', 'webm', 'mov', 'avi', 'mkv'];
+import { AUDIO_EXT, CODE_EXT, IMAGE_EXT, VIDEO_EXT } from '@/lib/constants';
 
 export const getFileIcon = (name: string) => {
   const ext = name.split('.').pop()?.toLowerCase();
