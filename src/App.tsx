@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import {
   Download,
   File,
@@ -183,7 +183,9 @@ export default function App() {
       setTreeLoading(true);
       setTreeError(null);
       setTree([]);
+      startTransition(() => {
       setSelectedFile(null);
+    });
       setCurrentPath('');
       setOpenNodes(new Set());
       try {
@@ -248,7 +250,9 @@ export default function App() {
       if (event.key !== 'Escape') return;
       if (document.activeElement === searchInputRef.current) return;
       if (selectedFile) {
-        setSelectedFile(null);
+        startTransition(() => {
+      setSelectedFile(null);
+    });
         return;
       }
       if (currentPath) {
@@ -360,7 +364,9 @@ export default function App() {
       handleNavigate(node.path);
     } else {
       await expandAncestors(node.path);
-      setSelectedFile(node);
+      startTransition(() => {
+        setSelectedFile(node);
+      });
       setCurrentPath(getParentPath(node.path));
     }
     if (node.type === 'file') {
@@ -385,7 +391,9 @@ export default function App() {
   );
 
   const handleNavigate = (p: string) => {
-    setSelectedFile(null);
+    startTransition(() => {
+      setSelectedFile(null);
+    });
     setCurrentPath(p);
     const next = new Set(openNodes);
     if (p) next.add(p);

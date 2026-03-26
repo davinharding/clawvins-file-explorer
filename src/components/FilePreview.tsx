@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
 import { AlertTriangle, Check, Copy, FileAudio, FileCode2, FileImage, FileText, FileVideo } from 'lucide-react';
@@ -14,6 +13,11 @@ import { AUDIO_EXT, CODE_LANGUAGE, IMAGE_EXT, LARGE_FILE_THRESHOLD, MARKDOWN_EXT
 
 const LARGE_PREVIEW_BYTES = 1024 * 1024;
 const PREVIEW_CHUNK_CHARS = 200_000;
+
+const SyntaxHighlighter = lazy(async () => {
+  const module = await import('react-syntax-highlighter');
+  return { default: module.Prism };
+});
 
 const getExt = (name: string) => name.split('.').pop()?.toLowerCase() ?? '';
 
@@ -50,20 +54,31 @@ const MarkdownCode = ({
   const language = match?.[1];
 
   return (
-    <SyntaxHighlighter
-      style={oneDark}
-      language={language}
-      PreTag="div"
-      customStyle={{
-        background: 'transparent',
-        margin: 0,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-all',
-        overflowWrap: 'break-word',
-      }}
+    <Suspense
+      fallback={(
+        <div className="space-y-2 animate-pulse py-1">
+          <div className="h-3 w-11/12 rounded bg-muted/40" />
+          <div className="h-3 w-10/12 rounded bg-muted/40" />
+          <div className="h-3 w-8/12 rounded bg-muted/40" />
+          <div className="h-3 w-9/12 rounded bg-muted/40" />
+        </div>
+      )}
     >
-      {code}
-    </SyntaxHighlighter>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={language}
+        PreTag="div"
+        customStyle={{
+          background: 'transparent',
+          margin: 0,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          overflowWrap: 'break-word',
+        }}
+      >
+        {code}
+      </SyntaxHighlighter>
+    </Suspense>
   );
 };
 
@@ -110,6 +125,12 @@ export default function FilePreview({
   useEffect(() => {
     setImageLoaded(false);
   }, [file?.path]);
+
+  useEffect(() => {
+    return () => {
+      setImageLoaded(false);
+    };
+  }, []);
 
   useEffect(() => {
     if (!file?.path) {
