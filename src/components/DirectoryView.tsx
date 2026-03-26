@@ -1,351 +1,329 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Folder, LayoutGrid, List } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { Folder, FolderOpen } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { getFileIcon } from '@/lib/icons';
-import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils';
-import { buildWorkspaceFileUrl, type FileNode } from '@/lib/api';
-import { IMAGE_EXT } from '@/lib/constants';
-
-const getMetaLabel = (sizeLabel: string, timeLabel: string) => {
-  if (!sizeLabel && !timeLabel) return '—';
-  if (!sizeLabel) return timeLabel;
-  if (!timeLabel) return sizeLabel;
-  return `${sizeLabel} · ${timeLabel}`;
-};
+import { getFileIcon, isImageFile } from '@/lib/icons';
+import { buildWorkspaceFileUrl, formatFileSize, formatRelativeTime } from '@/lib/utils';
+import type { DirectoryEntry, WorkspaceInfo } from '@/lib/api';
 
 type DirectoryViewProps = {
-  path: string;
-  entries: FileNode[];
-  loading?: boolean;
-  onOpenFile: (node: FileNode) => void;
-  onOpenDirectory: (node: FileNode) => void;
-  workspace?: string;
+  entries: DirectoryEntry[];
+  workspace?: WorkspaceInfo | null;
+  viewMode: 'grid' | 'list';
+  onOpenFile: (node: DirectoryEntry) => void;
+  onOpenDirectory: (node: DirectoryEntry) => void;
 };
 
-type SortField = 'name' | 'size' | 'modified' | 'type';
-type SortDir = 'asc' | 'desc';
-type ViewMode = 'grid' | 'list';
-
-const SORT_STORAGE_KEY = 'fe_dir_sort';
-const VIEW_MODE_STORAGE_KEY = 'fe_dir_view_mode';
-
-
-const isImageFile = (filename: string): boolean => {
-  const ext = filename.split('.').pop()?.toLowerCase();
-  return ext ? IMAGE_EXT.includes(ext) : false;
+type VisibleNode = {
+  node: DirectoryEntry;
 };
 
-const sortButtons: { field: SortField; label: string }[] = [
-  { field: 'name', label: 'Name' },
-  { field: 'size', label: 'Size' },
-  { field: 'modified', label: 'Modified' },
-  { field: 'type', label: 'Type' },
-];
+const buildVisibleNodes = (nodes: DirectoryEntry[]) => nodes.map((node) => ({ node } as VisibleNode));
+
+const GRID_ITEM_MIN_WIDTH = 240;
 
 export default function DirectoryView({
-  path,
   entries,
-  loading,
+  workspace,
+  viewMode,
   onOpenFile,
   onOpenDirectory,
-  workspace,
 }: DirectoryViewProps) {
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDir, setSortDir] = useState<SortDir>('asc');
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const sortedEntries = useMemo(
+    () =>
+      [...entries].sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      }),
+    [entries]
+  );
+
+  const visibleNodes = useMemo(() => buildVisibleNodes(sortedEntries), [sortedEntries]);
+  const indexByPath = useMemo(
+    () => new Map(visibleNodes.map((item, index) => [item.node.path, index])),
+    [visibleNodes]
+  );
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const focusedPathRef = useRef<string | null>(null);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SORT_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as { field?: unknown; direction?: unknown };
-      if (
-        (parsed.field === 'name' ||
-          parsed.field === 'size' ||
-          parsed.field === 'modified' ||
-          parsed.field === 'type') &&
-        (parsed.direction === 'asc' || parsed.direction === 'desc')
-      ) {
-        setSortField(parsed.field);
-        setSortDir(parsed.direction);
-      }
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-      if (stored === 'grid' || stored === 'list') {
-        setViewMode(stored);
-      }
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify({ field: sortField, direction: sortDir }));
-    } catch (_) {}
-  }, [sortDir, sortField]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
-    } catch (_) {}
-  }, [viewMode]);
-
-  const sortedEntries = useMemo(() => {
-    const getExtension = (name: string) => {
-      const lastDot = name.lastIndexOf('.');
-      if (lastDot <= 0 || lastDot === name.length - 1) return '';
-      return name.slice(lastDot + 1).toLocaleLowerCase();
-    };
-
-    const compareName = (a: FileNode, b: FileNode) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'accent' });
-
-    const directoryFirst = (a: FileNode, b: FileNode) => {
-      if (a.type === b.type) return 0;
-      return a.type === 'dir' ? -1 : 1;
-    };
-
-    return [...entries].sort((a, b) => {
-      const directoryBias = directoryFirst(a, b);
-      if (directoryBias !== 0) return directoryBias;
-
-      let comparison = 0;
-      if (sortField === 'name') {
-        comparison = compareName(a, b);
-      } else if (sortField === 'size') {
-        comparison = (a.size ?? 0) - (b.size ?? 0);
-      } else if (sortField === 'modified') {
-        comparison = (a.mtime ?? 0) - (b.mtime ?? 0);
-      } else {
-        const extCompare = getExtension(a.name).localeCompare(getExtension(b.name), undefined, {
-          sensitivity: 'accent',
-        });
-        comparison = extCompare === 0 ? compareName(a, b) : extCompare;
-      }
-
-      if (comparison === 0) {
-        comparison = compareName(a, b);
-      }
-
-      return sortDir === 'asc' ? comparison : -comparison;
-    });
-  }, [entries, sortField, sortDir]);
-
-  const onSortClick = (field: SortField) => {
-    if (field === sortField) {
-      setSortDir((current) => (current === 'asc' ? 'desc' : 'asc'));
+    if (visibleNodes.length === 0) {
+      focusedPathRef.current = null;
       return;
     }
-    setSortField(field);
-    setSortDir('asc');
-  };
+
+    if (!focusedPathRef.current || !indexByPath.has(focusedPathRef.current)) {
+      focusedPathRef.current = visibleNodes[0].node.path;
+    }
+  }, [indexByPath, visibleNodes]);
+
+  const focusByIndex = useCallback(
+    (index: number) => {
+      const item = visibleNodes[index];
+      if (!item) return;
+      focusedPathRef.current = item.node.path;
+      const element = itemRefs.current[index];
+      if (element) {
+        element.focus();
+      }
+    },
+    [visibleNodes]
+  );
+
+  const getGridColumnCount = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return 1;
+    const width = container.clientWidth;
+    if (!width || Number.isNaN(width)) return 1;
+    return Math.max(1, Math.floor(width / GRID_ITEM_MIN_WIDTH));
+  }, []);
+
+  const openEntry = useCallback(
+    (node: DirectoryEntry) => {
+      if (node.type === 'dir') {
+        onOpenDirectory(node);
+      } else {
+        onOpenFile(node);
+      }
+    },
+    [onOpenDirectory, onOpenFile]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>) => {
+      if (visibleNodes.length === 0) return;
+
+      const currentIndex = focusedPathRef.current && indexByPath.has(focusedPathRef.current)
+        ? indexByPath.get(focusedPathRef.current) ?? 0
+        : 0;
+      const lastIndex = visibleNodes.length - 1;
+      let nextIndex = currentIndex;
+      let handled = false;
+
+      if (viewMode === 'list') {
+        switch (event.key) {
+          case 'ArrowDown':
+            nextIndex = Math.min(currentIndex + 1, lastIndex);
+            handled = true;
+            break;
+          case 'ArrowUp':
+            nextIndex = Math.max(currentIndex - 1, 0);
+            handled = true;
+            break;
+          case 'Home':
+            nextIndex = 0;
+            handled = true;
+            break;
+          case 'End':
+            nextIndex = lastIndex;
+            handled = true;
+            break;
+          case 'Enter': {
+            const node = visibleNodes[currentIndex]?.node;
+            if (node) {
+              openEntry(node);
+              handled = true;
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      } else {
+        const cols = getGridColumnCount();
+
+        switch (event.key) {
+          case 'ArrowRight':
+            nextIndex = Math.min(currentIndex + 1, lastIndex);
+            handled = true;
+            break;
+          case 'ArrowLeft':
+            nextIndex = Math.max(currentIndex - 1, 0);
+            handled = true;
+            break;
+          case 'ArrowDown':
+            nextIndex = Math.min(currentIndex + cols, lastIndex);
+            handled = true;
+            break;
+          case 'ArrowUp':
+            nextIndex = Math.max(currentIndex - cols, 0);
+            handled = true;
+            break;
+          case 'Home':
+            nextIndex = 0;
+            handled = true;
+            break;
+          case 'End':
+            nextIndex = lastIndex;
+            handled = true;
+            break;
+          case 'Enter': {
+            const node = visibleNodes[currentIndex]?.node;
+            if (node) {
+              openEntry(node);
+              handled = true;
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+
+      if (!handled) return;
+
+      event.preventDefault();
+      if (nextIndex !== currentIndex || event.key !== 'Enter') {
+        focusByIndex(nextIndex);
+      }
+    },
+    [focusByIndex, getGridColumnCount, indexByPath, openEntry, viewMode, visibleNodes]
+  );
+
+  const handleItemFocus = useCallback((path: string) => {
+    focusedPathRef.current = path;
+  }, []);
+
+  if (sortedEntries.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-border/70 bg-card/40 p-10 text-center text-sm text-muted-foreground">
+        This directory is empty.
+      </div>
+    );
+  }
 
   return (
-    <Card className="flex h-full max-w-[100vw] flex-col overflow-hidden bg-card/80">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-sm">Directory</CardTitle>
-          <p className="text-xs text-muted-foreground">{path}</p>
+    <div
+      ref={containerRef}
+      onKeyDown={handleKeyDown}
+      role={viewMode === 'grid' ? 'grid' : 'listbox'}
+      aria-label="Directory contents"
+      className="outline-none"
+      tabIndex={-1}
+    >
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+          {sortedEntries.map((node, index) => {
+            const Icon = node.type === 'dir' ? FolderOpen : getFileIcon(node.name);
+            const metaLabel =
+              node.type === 'dir'
+                ? `${node.childCount ?? 0} items`
+                : `${formatFileSize(node.size)} · ${formatRelativeTime(node.mtime) || '—'}`;
+            const isFocused = focusedPathRef.current === node.path;
+
+            return (
+              <button
+                ref={(element) => {
+                  itemRefs.current[index] = element;
+                }}
+                key={node.path}
+                type="button"
+                onClick={() => openEntry(node)}
+                onFocus={() => handleItemFocus(node.path)}
+                className={`dir-item flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-4 py-3 text-left transition hover:border-primary/60 hover:bg-card ${isFocused ? 'dir-item-focused' : ''}`}
+                title={node.path}
+                tabIndex={isFocused ? 0 : -1}
+                aria-selected={isFocused}
+                role="gridcell"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 overflow-hidden">
+                  {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                    <img
+                      src={buildWorkspaceFileUrl(node.path, workspace)}
+                      alt={node.name}
+                      className="h-10 w-10 object-cover rounded-xl"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const icon = target.nextElementSibling as HTMLElement;
+                        if (icon) icon.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  <Icon
+                    className={
+                      node.type === 'dir'
+                        ? 'h-5 w-5 text-primary'
+                        : 'h-5 w-5 text-muted-foreground'
+                    }
+                    style={{
+                      display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
+                    }}
+                  />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-foreground">
+                    {node.name}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {metaLabel}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
         </div>
-        <span className="text-xs text-muted-foreground">{entries.length} items</span>
-      </CardHeader>
-      <CardContent className="flex-1 pt-0">
-        <ScrollArea className="h-full">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {sortButtons.map((button) => {
-                const isActive = button.field === sortField;
-                const DirectionIcon = sortDir === 'asc' ? ArrowUp : ArrowDown;
+      ) : (
+        <div className="space-y-1">
+          {sortedEntries.map((node, index) => {
+            const Icon = node.type === 'dir' ? Folder : getFileIcon(node.name);
+            const sizeLabel = node.type === 'file' ? formatFileSize(node.size) : '—';
+            const timeLabel = formatRelativeTime(node.mtime) || '—';
+            const isFocused = focusedPathRef.current === node.path;
 
-                return (
-                  <Button
-                    key={button.field}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSortClick(button.field)}
-                    className={cn(
-                      'rounded-full px-3',
-                      isActive ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
-                    )}
-                  >
-                    {button.label}
-                    {isActive ? <DirectionIcon className="h-3.5 w-3.5" /> : null}
-                  </Button>
-                );
-              })}
-            </div>
-            <div className="ml-auto flex items-center gap-1">
-              <Button
+            return (
+              <button
+                ref={(element) => {
+                  itemRefs.current[index] = element;
+                }}
+                key={node.path}
                 type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setViewMode('grid')}
-                className={cn(
-                  'h-8 w-8 rounded-full',
-                  viewMode === 'grid' ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
-                )}
-                aria-label="Grid view"
+                onClick={() => openEntry(node)}
+                onFocus={() => handleItemFocus(node.path)}
+                className={`dir-item flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-muted/50 ${isFocused ? 'dir-item-focused' : ''}`}
+                title={node.path}
+                tabIndex={isFocused ? 0 : -1}
+                aria-selected={isFocused}
+                role="option"
               >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => setViewMode('list')}
-                className={cn(
-                  'h-8 w-8 rounded-full',
-                  viewMode === 'list' ? 'bg-primary/20 text-foreground hover:bg-primary/20' : 'bg-muted/40'
-                )}
-                aria-label="List view"
-              >
-                <List className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          {loading ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <div
-                  key={`dir-skeleton-${index}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4"
-                >
-                  <div className="h-10 w-10 rounded-xl bg-muted/40" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-2/3 rounded bg-muted/40" />
-                    <div className="h-3 w-1/2 rounded bg-muted/30" />
-                  </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60 overflow-hidden">
+                  {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                    <img
+                      src={buildWorkspaceFileUrl(node.path, workspace)}
+                      alt={node.name}
+                      className="h-8 w-8 object-cover rounded-md"
+                      loading="lazy"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const icon = target.nextElementSibling as HTMLElement;
+                        if (icon) icon.style.display = 'block';
+                      }}
+                    />
+                  ) : null}
+                  <Icon
+                    className={
+                      node.type === 'dir'
+                        ? 'h-4 w-4 text-primary'
+                        : 'h-4 w-4 text-muted-foreground'
+                    }
+                    style={{
+                      display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
+                    }}
+                  />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">{node.name}</p>
+                  <p className="text-xs text-muted-foreground">{node.type === 'dir' ? 'Directory' : sizeLabel}</p>
                 </div>
-              ))}
-            </div>
-          ) : sortedEntries.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3 py-16 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-muted/50">
-                <Folder className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-foreground">This directory is empty</p>
-                <p className="text-xs text-muted-foreground">Add files to see them here.</p>
-              </div>
-            </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {sortedEntries.map((node) => {
-                const Icon = node.type === 'dir' ? Folder : getFileIcon(node.name);
-                const sizeLabel = node.type === 'file' ? formatFileSize(node.size) : '';
-                const timeLabel = formatRelativeTime(node.mtime);
-                const metaLabel = getMetaLabel(sizeLabel || '—', timeLabel || '—');
-
-                return (
-                  <button
-                    key={node.path}
-                    type="button"
-                    onClick={() =>
-                      node.type === 'dir' ? onOpenDirectory(node) : onOpenFile(node)
-                    }
-                    className="group flex w-full items-start gap-3 rounded-2xl border border-border/40 bg-muted/30 p-4 text-left transition hover:bg-muted/50"
-                    title={node.path}
-                  >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 overflow-hidden">
-                      {node.type === 'file' && isImageFile(node.name) && workspace ? (
-                        <img
-                          src={buildWorkspaceFileUrl(node.path, workspace)}
-                          alt={node.name}
-                          className="h-10 w-10 object-cover rounded-xl"
-                          loading="lazy"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const icon = target.nextElementSibling as HTMLElement;
-                            if (icon) icon.style.display = 'block';
-                          }}
-                        />
-                      ) : null}
-                      <Icon
-                        className={
-                          node.type === 'dir'
-                            ? 'h-5 w-5 text-primary'
-                            : 'h-5 w-5 text-muted-foreground'
-                        }
-                        style={{
-                          display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
-                        }}
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold text-foreground">
-                        {node.name}
-                      </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {metaLabel}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              {sortedEntries.map((node) => {
-                const Icon = node.type === 'dir' ? Folder : getFileIcon(node.name);
-                const sizeLabel = node.type === 'file' ? formatFileSize(node.size) : '—';
-                const timeLabel = formatRelativeTime(node.mtime) || '—';
-
-                return (
-                  <button
-                    key={node.path}
-                    type="button"
-                    onClick={() =>
-                      node.type === 'dir' ? onOpenDirectory(node) : onOpenFile(node)
-                    }
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-muted/50"
-                    title={node.path}
-                  >
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60 overflow-hidden">
-                      {node.type === 'file' && isImageFile(node.name) && workspace ? (
-                        <img
-                          src={buildWorkspaceFileUrl(node.path, workspace)}
-                          alt={node.name}
-                          className="h-8 w-8 object-cover rounded-md"
-                          loading="lazy"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const icon = target.nextElementSibling as HTMLElement;
-                            if (icon) icon.style.display = 'block';
-                          }}
-                        />
-                      ) : null}
-                      <Icon
-                        className={
-                          node.type === 'dir'
-                            ? 'h-4 w-4 text-primary'
-                            : 'h-4 w-4 text-muted-foreground'
-                        }
-                        style={{
-                          display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
-                        }}
-                      />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                      {node.name}
-                    </span>
-                    <span className="w-16 text-right text-xs text-muted-foreground">{sizeLabel}</span>
-                    <span className="w-16 text-right text-xs text-muted-foreground">{timeLabel}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </ScrollArea>
-      </CardContent>
-    </Card>
+                <div className="text-xs text-muted-foreground">{timeLabel}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }

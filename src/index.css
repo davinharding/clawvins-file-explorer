@@ -127,3 +127,17 @@ body {
 .tree-item-focused {
   box-shadow: 0 0 0 1px hsl(var(--accent) / 0.6);
 }
+
+.dir-item {
+  outline: none;
+}
+
+.dir-item:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px hsl(var(--accent) / 0.35);
+}
+
+.dir-item-focused {
+  box-shadow: 0 0 0 1px hsl(var(--accent) / 0.6);
+}
