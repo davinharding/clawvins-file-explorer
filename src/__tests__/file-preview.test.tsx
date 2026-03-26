@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import FilePreview from '@/components/FilePreview';
 import type { FileNode } from '@/lib/api';
 
@@ -12,13 +12,13 @@ vi.mock('@/lib/api', async () => {
 });
 
 describe('FilePreview', () => {
-  it('renders text file content', () => {
+  it('renders text file content', async () => {
     const file: FileNode = { type: 'file', name: 'notes.txt', path: 'notes.txt' };
-    const { container } = render(
+    render(
       <FilePreview file={file} content={'Hello world'} loading={false} />
     );
 
-    expect(container.textContent).toContain('Hello world');
+    expect(await screen.findByText('Hello world')).toBeTruthy();
   });
 
   it('renders markdown content', () => {
