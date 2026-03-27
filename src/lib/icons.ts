@@ -2,6 +2,11 @@ import { File, FileAudio, FileCode2, FileImage, FileText, FileVideo } from 'luci
 
 import { AUDIO_EXT, CODE_EXT, IMAGE_EXT, VIDEO_EXT } from '@/lib/constants';
 
+export const isImageFile = (name: string) => {
+  const ext = name.split('.').pop()?.toLowerCase();
+  return !!ext && IMAGE_EXT.includes(ext);
+};
+
 export const getFileIcon = (name: string) => {
   const ext = name.split('.').pop()?.toLowerCase();
   if (!ext) return File;

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from 'rea
 import { Folder, FolderOpen } from 'lucide-react';
 
 import { getFileIcon, isImageFile } from '@/lib/icons';
-import { buildWorkspaceFileUrl, formatFileSize, formatRelativeTime } from '@/lib/utils';
+import { buildWorkspaceFileUrl } from '@/lib/api';
+import { formatFileSize, formatRelativeTime } from '@/lib/utils';
 import type { DirectoryEntry, WorkspaceInfo } from '@/lib/api';
 
 type DirectoryViewProps = {
