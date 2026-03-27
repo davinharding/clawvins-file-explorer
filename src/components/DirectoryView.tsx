@@ -12,6 +12,8 @@ type DirectoryViewProps = {
   viewMode: 'grid' | 'list';
   onOpenFile: (node: DirectoryEntry) => void;
   onOpenDirectory: (node: DirectoryEntry) => void;
+  sortBy: 'name' | 'date' | 'size';
+  sortOrder: 'asc' | 'desc';
 };
 
 type VisibleNode = {
@@ -28,14 +30,35 @@ export default function DirectoryView({
   viewMode,
   onOpenFile,
   onOpenDirectory,
+  sortBy,
+  sortOrder,
 }: DirectoryViewProps) {
   const sortedEntries = useMemo(
     () =>
       [...entries].sort((a, b) => {
         if (a.type !== b.type) return a.type === 'dir' ? -1 : 1;
-        return a.name.localeCompare(b.name);
+
+        let comparison = 0;
+
+        if (sortBy === 'name') {
+          comparison = a.name.localeCompare(b.name);
+        } else if (sortBy === 'date') {
+          const aTime = a.mtime ? Date.parse(a.mtime) : 0;
+          const bTime = b.mtime ? Date.parse(b.mtime) : 0;
+          comparison = aTime - bTime;
+        } else {
+          const aSize = a.type === 'file' ? a.size ?? 0 : 0;
+          const bSize = b.type === 'file' ? b.size ?? 0 : 0;
+          comparison = aSize - bSize;
+        }
+
+        if (comparison === 0) {
+          comparison = a.name.localeCompare(b.name);
+        }
+
+        return sortOrder === 'asc' ? comparison : -comparison;
       }),
-    [entries]
+    [entries, sortBy, sortOrder]
   );
 
   const visibleNodes = useMemo(() => buildVisibleNodes(sortedEntries), [sortedEntries]);

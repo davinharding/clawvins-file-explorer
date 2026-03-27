@@ -1,8 +1,13 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Calendar,
   Download,
   File,
   FolderTree,
+  HardDrive,
   LayoutGrid,
   Link2,
   List,
@@ -45,6 +50,8 @@ const WORKSPACES = [
 const RECENT_LIMIT = 5;
 const RECENT_STORAGE_PREFIX = 'fe_recent_';
 const VIEW_MODE_STORAGE_KEY = 'fe_view_mode';
+const SORT_BY_STORAGE_KEY = 'fe_sort_by';
+const SORT_ORDER_STORAGE_KEY = 'fe_sort_order';
 
 const getParentPath = (p: string) => {
   if (!p) return '';
@@ -147,12 +154,40 @@ export default function App() {
       return 'grid';
     }
   });
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>(() => {
+    try {
+      const stored = localStorage.getItem(SORT_BY_STORAGE_KEY);
+      return stored === 'date' || stored === 'size' ? stored : 'name';
+    } catch {
+      return 'name';
+    }
+  });
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(() => {
+    try {
+      const stored = localStorage.getItem(SORT_ORDER_STORAGE_KEY);
+      return stored === 'desc' ? 'desc' : 'asc';
+    } catch {
+      return 'asc';
+    }
+  });
   const drawerTouchStartX = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const inMemoryRecents = useRef<Map<string, FileNode[]>>(new Map());
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
+  }, []);
+
+  const cycleSortBy = useCallback(() => {
+    setSortBy((prev) => {
+      if (prev === 'name') return 'date';
+      if (prev === 'date') return 'size';
+      return 'name';
+    });
+  }, []);
+
+  const toggleSortOrder = useCallback(() => {
+    setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
   }, []);
 
   const loadDirectory = useCallback(
@@ -262,7 +297,7 @@ export default function App() {
     };
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, [toggleViewMode]);
+  }, [cycleSortBy, toggleSortOrder, toggleViewMode]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -438,6 +473,15 @@ export default function App() {
       // ignore localStorage errors
     }
   }, [viewMode]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_BY_STORAGE_KEY, sortBy);
+      localStorage.setItem(SORT_ORDER_STORAGE_KEY, sortOrder);
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [sortBy, sortOrder]);
 
   const handleDrawerTouchStart = (event: TouchEvent<HTMLElement>) => {
     drawerTouchStartX.current = event.touches[0]?.clientX ?? null;
@@ -749,6 +793,59 @@ export default function App() {
                   >
                     <Download className="h-4 w-4" /> Download
                   </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortBy('name')}
+                      aria-label="Sort by name"
+                      title="Sort by name (Shift+S)"
+                      className={sortBy === 'name' ? 'border-primary text-primary' : ''}
+                    >
+                      <ArrowUpDown className="h-4 w-4" /> Name
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortBy('date')}
+                      aria-label="Sort by date"
+                      title="Sort by date (Shift+S)"
+                      className={sortBy === 'date' ? 'border-primary text-primary' : ''}
+                    >
+                      <Calendar className="h-4 w-4" /> Date
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSortBy('size')}
+                      aria-label="Sort by size"
+                      title="Sort by size (Shift+S)"
+                      className={sortBy === 'size' ? 'border-primary text-primary' : ''}
+                    >
+                      <HardDrive className="h-4 w-4" /> Size
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleSortOrder}
+                      aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+                      title={sortOrder === 'asc' ? 'Ascending (Shift+O)' : 'Descending (Shift+O)'}
+                    >
+                      {sortOrder === 'asc' ? (
+                        <>
+                          <ArrowUp className="h-4 w-4" /> Asc
+                        </>
+                      ) : (
+                        <>
+                          <ArrowDown className="h-4 w-4" /> Desc
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
@@ -799,6 +896,8 @@ export default function App() {
                     onOpenDirectory={(node) => handleNavigate(node.path)}
                     workspace={workspace}
                     viewMode={viewMode}
+                    sortBy={sortBy}
+                    sortOrder={sortOrder}
                   />
                 </DropZone>
               ) : (
