@@ -3,7 +3,9 @@ import {
   Download,
   File,
   FolderTree,
+  LayoutGrid,
   Link2,
+  List,
   Menu,
   RefreshCw,
   TerminalSquare,
@@ -42,6 +44,7 @@ const WORKSPACES = [
 
 const RECENT_LIMIT = 5;
 const RECENT_STORAGE_PREFIX = 'fe_recent_';
+const VIEW_MODE_STORAGE_KEY = 'fe_view_mode';
 
 const getParentPath = (p: string) => {
   if (!p) return '';
@@ -136,9 +139,21 @@ export default function App() {
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shortcutHelpOpen, setShortcutHelpOpen] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    try {
+      const stored = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
+      return stored === 'list' ? 'list' : 'grid';
+    } catch {
+      return 'grid';
+    }
+  });
   const drawerTouchStartX = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const inMemoryRecents = useRef<Map<string, FileNode[]>>(new Map());
+
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
+  }, []);
 
   const loadDirectory = useCallback(
     async (p: string) => {
@@ -240,10 +255,14 @@ export default function App() {
         event.preventDefault();
         setShortcutHelpOpen(true);
       }
+      if (event.key.toLowerCase() === 'v') {
+        event.preventDefault();
+        toggleViewMode();
+      }
     };
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, []);
+  }, [toggleViewMode]);
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
@@ -411,6 +430,14 @@ export default function App() {
       void loadDirectory(currentPath);
     }
   }, [currentPath, loadDirectory, loadingNodes, selectedFile, tree]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_MODE_STORAGE_KEY, viewMode);
+    } catch {
+      // ignore localStorage errors
+    }
+  }, [viewMode]);
 
   const handleDrawerTouchStart = (event: TouchEvent<HTMLElement>) => {
     drawerTouchStartX.current = event.touches[0]?.clientX ?? null;
@@ -722,6 +749,24 @@ export default function App() {
                   >
                     <Download className="h-4 w-4" /> Download
                   </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleViewMode}
+                    aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
+                    title={viewMode === 'grid' ? 'Switch to list view (V)' : 'Switch to grid view (V)'}
+                  >
+                    {viewMode === 'grid' ? (
+                      <>
+                        <LayoutGrid className="h-4 w-4" /> Grid
+                      </>
+                    ) : (
+                      <>
+                        <List className="h-4 w-4" /> List
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -753,6 +798,7 @@ export default function App() {
                     onOpenFile={(node) => handleSelect(node)}
                     onOpenDirectory={(node) => handleNavigate(node.path)}
                     workspace={workspace}
+                    viewMode={viewMode}
                   />
                 </DropZone>
               ) : (
