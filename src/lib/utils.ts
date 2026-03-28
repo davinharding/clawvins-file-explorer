@@ -41,3 +41,20 @@ export function formatRelativeTime(ms?: number | null): string {
   if (diff < year) return `${Math.floor(diff / month)}mo ago`;
   return `${Math.floor(diff / year)}y ago`;
 }
+
+export function buildHash(path: string, file: string): string {
+  const params = new URLSearchParams();
+  if (path) params.set('path', path);
+  if (file) params.set('file', file);
+  const serialized = params.toString();
+  return serialized ? `#${serialized}` : '';
+}
+
+export function parseHash(hash: string): { path: string; file: string } {
+  const normalized = hash.startsWith('#') ? hash.slice(1) : hash;
+  const params = new URLSearchParams(normalized);
+  return {
+    path: params.get('path') ?? '',
+    file: params.get('file') ?? '',
+  };
+}

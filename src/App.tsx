@@ -33,7 +33,7 @@ import { Separator } from '@/components/ui/separator';
 import { buildWorkspaceFileUrl, fetchFileContent, listDirectory, type FileNode } from '@/lib/api';
 import { LARGE_FILE_THRESHOLD } from '@/lib/constants';
 import { collectDirPaths, filterTree } from '@/lib/tree';
-import { cn } from '@/lib/utils';
+import { buildHash, cn, parseHash } from '@/lib/utils';
 
 const WORKSPACES = [
   { id: 'workspace', label: 'Clawvin' },
@@ -173,6 +173,7 @@ export default function App() {
   const drawerTouchStartX = useRef<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const inMemoryRecents = useRef<Map<string, FileNode[]>>(new Map());
+  const isInternalNavRef = useRef(false);
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => (prev === 'grid' ? 'list' : 'grid'));
@@ -227,6 +228,64 @@ export default function App() {
       inMemoryRecents.current.set(key, files);
     }
   }, []);
+
+  useEffect(() => {
+    const { path, file } = parseHash(window.location.hash);
+    setCurrentPath(path);
+    if (file) {
+      startTransition(() => {
+        setSelectedFile({ name: file.split('/').pop() ?? file, path: file, type: 'file' });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isInternalNavRef.current) {
+      isInternalNavRef.current = false;
+      return;
+    }
+
+    const parsed = parseHash(window.location.hash);
+    const nextPath = selectedFile?.path ? getParentPath(selectedFile.path) : currentPath;
+    const nextFile = selectedFile?.path ?? '';
+
+    if (parsed.path === nextPath && parsed.file === nextFile) {
+      return;
+    }
+
+    const nextHash = buildHash(nextPath, nextFile);
+    const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+    if (selectedFile) {
+      window.history.replaceState(null, '', nextUrl);
+    } else {
+      window.history.pushState(null, '', nextUrl);
+    }
+  }, [currentPath, selectedFile]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      isInternalNavRef.current = true;
+      const { path, file } = parseHash(window.location.hash);
+      setCurrentPath(path);
+      if (file) {
+        startTransition(() => {
+          setSelectedFile({ name: file.split('/').pop() ?? file, path: file, type: 'file' });
+        });
+      } else {
+        startTransition(() => {
+          setSelectedFile(null);
+        });
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    isInternalNavRef.current = true;
+    window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+  }, [workspace]);
 
   useEffect(() => {
     const init = async () => {
