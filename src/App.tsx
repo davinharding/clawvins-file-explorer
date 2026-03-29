@@ -838,7 +838,7 @@ export default function App() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => void handleCopyPath()}
+                    onClick={() => handleCopyPath()}
                     disabled={!selectedFile}
                   >
                     <Link2 className="h-4 w-4" /> Copy path
@@ -847,7 +847,7 @@ export default function App() {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => void handleDownload()}
+                    onClick={() => handleDownload()}
                     disabled={!selectedFile}
                   >
                     <Download className="h-4 w-4" /> Download
