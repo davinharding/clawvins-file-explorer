@@ -1,4 +1,4 @@
-import type { MutableRefObject, Ref } from 'react';
+import type { React, Ref } from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -26,7 +26,7 @@ export default function SearchBar({ value, onChange, placeholder, className, inp
     if (typeof inputRef === 'function') {
       inputRef(node);
     } else if (inputRef && 'current' in inputRef) {
-      (inputRef as MutableRefObject<HTMLInputElement | null>).current = node;
+      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
     }
   };
 

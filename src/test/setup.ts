@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { vi } from 'vitest';
 
 (globalThis as { process?: { env: Record<string, string> } }).process ??= { env: {} };

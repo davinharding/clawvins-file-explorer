@@ -14,8 +14,8 @@ type DirectoryViewProps = {
   onOpenDirectory: (node: FileNode) => void;
   sortBy: 'name' | 'date' | 'size';
   sortOrder: 'asc' | 'desc';
-  path?: string;
-  loading?: boolean;
+  path: string;
+  loading: boolean;
 };
 
 type VisibleNode = {
