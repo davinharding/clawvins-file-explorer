@@ -26,7 +26,6 @@ import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
 import ShortcutHelp from '@/components/ShortcutHelp';
 import StatusBar from '@/components/StatusBar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';

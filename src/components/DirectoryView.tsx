@@ -4,23 +4,25 @@ import { Folder, FolderOpen } from 'lucide-react';
 import { getFileIcon, isImageFile } from '@/lib/icons';
 import { buildWorkspaceFileUrl } from '@/lib/api';
 import { formatFileSize, formatRelativeTime } from '@/lib/utils';
-import type { DirectoryEntry, WorkspaceInfo } from '@/lib/api';
+import type { FileNode } from '@/lib/api';
 
 type DirectoryViewProps = {
-  entries: DirectoryEntry[];
-  workspace?: WorkspaceInfo | null;
+  entries: FileNode[];
+  workspace?: string | null;
   viewMode: 'grid' | 'list';
-  onOpenFile: (node: DirectoryEntry) => void;
-  onOpenDirectory: (node: DirectoryEntry) => void;
+  onOpenFile: (node: FileNode) => void;
+  onOpenDirectory: (node: FileNode) => void;
   sortBy: 'name' | 'date' | 'size';
   sortOrder: 'asc' | 'desc';
+  path?: string;
+  loading?: boolean;
 };
 
 type VisibleNode = {
-  node: DirectoryEntry;
+  node: FileNode;
 };
 
-const buildVisibleNodes = (nodes: DirectoryEntry[]) => nodes.map((node) => ({ node } as VisibleNode));
+const buildVisibleNodes = (nodes: FileNode[]) => nodes.map((node) => ({ node } as VisibleNode));
 
 const GRID_ITEM_MIN_WIDTH = 240;
 
@@ -104,7 +106,7 @@ export default function DirectoryView({
   }, []);
 
   const openEntry = useCallback(
-    (node: DirectoryEntry) => {
+    (node: FileNode) => {
       if (node.type === 'dir') {
         onOpenDirectory(node);
       } else {

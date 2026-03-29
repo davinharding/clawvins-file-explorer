@@ -1,6 +1,7 @@
 import { vi } from 'vitest';
 
-process.env.NODE_ENV = 'test';
+(globalThis as { process?: { env: Record<string, string> } }).process ??= { env: {} };
+(globalThis as { process: { env: Record<string, string> } }).process.env.NODE_ENV = 'test';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -25,5 +26,5 @@ if (!('clipboard' in navigator)) {
 }
 
 if (!('scrollTo' in window)) {
-  window.scrollTo = () => {};
+  Object.defineProperty(window, 'scrollTo', { value: () => {}, writable: true });
 }
