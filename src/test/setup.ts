@@ -1,8 +1,6 @@
-/// <reference types="node" />
 import { vi } from 'vitest';
 
-(globalThis as { process?: { env: Record<string, string> } }).process ??= { env: {} };
-(globalThis as { process: { env: Record<string, string> } }).process.env.NODE_ENV = 'test';
+import.meta.env.NODE_ENV = 'test';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

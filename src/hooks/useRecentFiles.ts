@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { FileNode } from '../lib/fileExplorer';
+import type { FileNode } from '@/lib/api';
 
 const RECENT_LIMIT = 10;
 const memoryRecentByWorkspace = new Map<string, FileNode[]>();

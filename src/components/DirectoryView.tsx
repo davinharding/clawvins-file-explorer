@@ -34,6 +34,8 @@ export default function DirectoryView({
   onOpenDirectory,
   sortBy,
   sortOrder,
+  path: _path,
+  loading: _loading,
 }: DirectoryViewProps) {
   const sortedEntries = useMemo(
     () =>
@@ -43,10 +45,10 @@ export default function DirectoryView({
         let comparison = 0;
 
         if (sortBy === 'name') {
-          comparison = a.name.localeCompare(b.name);
+          comparison = String(a.name).localeCompare(String(b.name));
         } else if (sortBy === 'date') {
-          const aTime = a.mtime ? Date.parse(a.mtime) : 0;
-          const bTime = b.mtime ? Date.parse(b.mtime) : 0;
+          const aTime = a.mtime ?? 0;
+          const bTime = b.mtime ?? 0;
           comparison = aTime - bTime;
         } else {
           const aSize = a.type === 'file' ? a.size ?? 0 : 0;
@@ -55,7 +57,7 @@ export default function DirectoryView({
         }
 
         if (comparison === 0) {
-          comparison = a.name.localeCompare(b.name);
+          comparison = String(a.name).localeCompare(String(b.name));
         }
 
         return sortOrder === 'asc' ? comparison : -comparison;
@@ -64,8 +66,8 @@ export default function DirectoryView({
   );
 
   const visibleNodes = useMemo(() => buildVisibleNodes(sortedEntries), [sortedEntries]);
-  const indexByPath = useMemo(
-    () => new Map(visibleNodes.map((item, index) => [item.node.path, index])),
+  const indexByPath = useMemo<Map<string, number>>(
+    () => new Map(visibleNodes.map((item, index) => [item.node.path, index] as [string, number])),
     [visibleNodes]
   );
 

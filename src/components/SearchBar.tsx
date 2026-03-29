@@ -1,4 +1,4 @@
-import type { React, Ref } from 'react';
+import type { RefObject } from 'react';
 import { useMemo, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,13 @@ interface SearchBarProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
-  inputRef?: Ref<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement | null> | ((instance: HTMLInputElement | null) => void);
   matchCount?: number;
 }
 
 export default function SearchBar({ value, onChange, placeholder, className, inputRef, matchCount }: SearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const localRef = useRef<HTMLInputElement>(null);
+  const localRef = useRef<HTMLInputElement | null>(null);
   const isMac = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
     return /Mac|iPhone|iPad|iPod/i.test(navigator.platform ?? navigator.userAgent);
@@ -26,7 +26,7 @@ export default function SearchBar({ value, onChange, placeholder, className, inp
     if (typeof inputRef === 'function') {
       inputRef(node);
     } else if (inputRef && 'current' in inputRef) {
-      (inputRef as React.MutableRefObject<HTMLInputElement | null>).current = node;
+      Object.assign(inputRef, { current: node });
     }
   };
 
