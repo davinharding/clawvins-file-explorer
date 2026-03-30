@@ -1,16 +1,7 @@
 import { startTransition, useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Calendar,
-  Download,
   File,
   FolderTree,
-  HardDrive,
-  LayoutGrid,
-  Link2,
-  List,
   Menu,
   RefreshCw,
   TerminalSquare,
@@ -24,6 +15,7 @@ import DropZone from '@/components/DropZone';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
+import Toolbar from '@/components/Toolbar';
 import ShortcutHelp from '@/components/ShortcutHelp';
 import StatusBar from '@/components/StatusBar';
 import { Button } from '@/components/ui/button';
@@ -833,97 +825,17 @@ export default function App() {
             <Card className="bg-card/80 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <Breadcrumbs items={breadcrumbs} onNavigate={handleNavigate} />
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyPath()}
-                    disabled={!selectedFile}
-                  >
-                    <Link2 className="h-4 w-4" /> Copy path
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload()}
-                    disabled={!selectedFile}
-                  >
-                    <Download className="h-4 w-4" /> Download
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortBy('name')}
-                      aria-label="Sort by name"
-                      title="Sort by name (Shift+S)"
-                      className={sortBy === 'name' ? 'border-primary text-primary' : ''}
-                    >
-                      <ArrowUpDown className="h-4 w-4" /> Name
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortBy('date')}
-                      aria-label="Sort by date"
-                      title="Sort by date (Shift+S)"
-                      className={sortBy === 'date' ? 'border-primary text-primary' : ''}
-                    >
-                      <Calendar className="h-4 w-4" /> Date
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSortBy('size')}
-                      aria-label="Sort by size"
-                      title="Sort by size (Shift+S)"
-                      className={sortBy === 'size' ? 'border-primary text-primary' : ''}
-                    >
-                      <HardDrive className="h-4 w-4" /> Size
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={toggleSortOrder}
-                      aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
-                      title={sortOrder === 'asc' ? 'Ascending (Shift+O)' : 'Descending (Shift+O)'}
-                    >
-                      {sortOrder === 'asc' ? (
-                        <>
-                          <ArrowUp className="h-4 w-4" /> Asc
-                        </>
-                      ) : (
-                        <>
-                          <ArrowDown className="h-4 w-4" /> Desc
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={toggleViewMode}
-                    aria-label={viewMode === 'grid' ? 'Switch to list view' : 'Switch to grid view'}
-                    title={viewMode === 'grid' ? 'Switch to list view (V)' : 'Switch to grid view (V)'}
-                  >
-                    {viewMode === 'grid' ? (
-                      <>
-                        <LayoutGrid className="h-4 w-4" /> Grid
-                      </>
-                    ) : (
-                      <>
-                        <List className="h-4 w-4" /> List
-                      </>
-                    )}
-                  </Button>
-                </div>
+                <Toolbar
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  sortOrder={sortOrder}
+                  toggleSortOrder={toggleSortOrder}
+                  viewMode={viewMode}
+                  toggleViewMode={toggleViewMode}
+                  onCopyPath={() => handleCopyPath()}
+                  onDownload={() => handleDownload()}
+                  hasSelectedFile={Boolean(selectedFile)}
+                />
               </div>
             </Card>
 
