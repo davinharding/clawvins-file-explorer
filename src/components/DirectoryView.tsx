@@ -34,8 +34,8 @@ export default function DirectoryView({
   onOpenDirectory,
   sortBy,
   sortOrder,
-  path: _path,
-  loading: _loading,
+  path,
+  loading,
 }: DirectoryViewProps) {
   const sortedEntries = useMemo(
     () =>
@@ -212,6 +212,48 @@ export default function DirectoryView({
   const handleItemFocus = useCallback((path: string) => {
     focusedPathRef.current = path;
   }, []);
+
+  if (loading) {
+    return (
+      <div
+        aria-label={`Loading directory contents for ${path || '/'}`}
+        className="outline-none"
+      >
+        {viewMode === 'grid' ? (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-4">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={`grid-skeleton-${index}`}
+                className="animate-pulse flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card/60 px-4 py-3"
+              >
+                <div className="h-10 w-10 rounded-xl bg-muted/40" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-3/4 rounded bg-muted/40" />
+                  <div className="mt-2 h-3 w-1/2 rounded bg-muted/40" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={`list-skeleton-${index}`}
+                className="animate-pulse flex w-full items-center gap-3 rounded-lg px-3 py-2"
+              >
+                <div className="h-8 w-8 rounded-md bg-muted/40" />
+                <div className="min-w-0 flex-1">
+                  <div className="h-4 w-2/5 rounded bg-muted/40" />
+                  <div className="mt-2 h-3 w-1/4 rounded bg-muted/40" />
+                </div>
+                <div className="h-3 w-20 rounded bg-muted/40" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (sortedEntries.length === 0) {
     return (
