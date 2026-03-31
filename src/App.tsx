@@ -341,10 +341,24 @@ export default function App() {
       if (event.key === '?') {
         event.preventDefault();
         setShortcutHelpOpen(true);
+        return;
       }
+
       if (event.key.toLowerCase() === 'v') {
         event.preventDefault();
         toggleViewMode();
+        return;
+      }
+
+      if (event.shiftKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        cycleSortBy();
+        return;
+      }
+
+      if (event.shiftKey && event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        toggleSortOrder();
       }
     };
     window.addEventListener('keydown', handleShortcut);
@@ -368,6 +382,33 @@ export default function App() {
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
   }, [currentPath, selectedFile]);
+  useEffect(() => {
+    const handleBackspace = (event: KeyboardEvent) => {
+      if (event.key !== 'Backspace') return;
+
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (selectedFile) {
+        event.preventDefault();
+        startTransition(() => {
+          setSelectedFile(null);
+        });
+        return;
+      }
+
+      if (currentPath) {
+        event.preventDefault();
+        setCurrentPath(getParentPath(currentPath));
+      }
+    };
+
+    window.addEventListener('keydown', handleBackspace);
+    return () => window.removeEventListener('keydown', handleBackspace);
+  }, [currentPath, selectedFile]);
+
 
   useEffect(() => {
     if (!selectedFile || selectedFile.type !== 'file') {

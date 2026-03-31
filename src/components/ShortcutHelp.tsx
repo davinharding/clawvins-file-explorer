@@ -70,6 +70,16 @@ export default function ShortcutHelp({ onClose }: ShortcutHelpProps) {
               </div>
             </section>
 
+            <section className="space-y-3" aria-labelledby="shortcuts-view-sort">
+              <h3 id="shortcuts-view-sort" className="text-sm font-medium text-foreground">View & Sort</h3>
+              <div className="space-y-2">
+                <ShortcutRow keys={<kbd className={kbdClassName}>V</kbd>} description="Toggle view mode (grid/list)" />
+                <ShortcutRow keys={<kbd className={kbdClassName}>Shift + S</kbd>} description="Cycle sort (name/date/size)" />
+                <ShortcutRow keys={<kbd className={kbdClassName}>Shift + O</kbd>} description="Toggle sort order (asc/desc)" />
+                <ShortcutRow keys={<kbd className={kbdClassName}>Backspace</kbd>} description="Go up one level (or close preview if file open)" />
+              </div>
+            </section>
+
             <section className="space-y-3" aria-labelledby="shortcuts-general">
               <h3 id="shortcuts-general" className="text-sm font-medium text-foreground">General</h3>
               <div className="space-y-2">
