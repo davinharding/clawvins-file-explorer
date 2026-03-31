@@ -126,6 +126,7 @@ export default function App() {
   const [fileContent, setFileContent] = useState('');
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [fileRetryCount, setFileRetryCount] = useState(0);
   const [largeFileAcknowledged, setLargeFileAcknowledged] = useState(false);
   const [recentFiles, setRecentFiles] = useState<FileNode[]>([]);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -399,7 +400,7 @@ export default function App() {
     };
 
     void fetchContent();
-  }, [largeFileAcknowledged, selectedFile, workspace]);
+  }, [fileRetryCount, largeFileAcknowledged, selectedFile, workspace]);
 
   useEffect(() => {
     setLargeFileAcknowledged(false);
@@ -671,7 +672,13 @@ export default function App() {
             ))}
           </div>
         ) : treeError ? (
-          <div className="text-sm text-rose-300">{treeError}</div>
+          <div className="space-y-3 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3">
+            <p className="text-sm text-rose-200">{treeError}</p>
+            <Button type="button" size="sm" variant="outline" onClick={handleRefresh}>
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
         ) : filteredTree.length === 0 ? (
           <div className="text-sm text-muted-foreground">No matches</div>
         ) : (
@@ -850,6 +857,7 @@ export default function App() {
                   largeFileAcknowledged={largeFileAcknowledged}
                   onLoadLargeFile={() => setLargeFileAcknowledged(true)}
                   onDownload={handleDownload}
+                  onRetry={() => setFileRetryCount((c) => c + 1)}
                 />
               ) : currentPath ? (
                 <DropZone

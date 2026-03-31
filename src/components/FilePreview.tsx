@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { AlertTriangle, Check, Copy, FileAudio, FileCode2, FileImage, FileText, FileVideo } from 'lucide-react';
+import { AlertTriangle, Check, Copy, FileAudio, FileCode2, FileImage, FileText, FileVideo, RefreshCw } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -91,6 +91,7 @@ type FilePreviewProps = {
   largeFileAcknowledged?: boolean;
   onLoadLargeFile?: (file: FileNode) => void;
   onDownload?: (file: FileNode) => void;
+  onRetry?: () => void;
 };
 
 export default function FilePreview({
@@ -102,6 +103,7 @@ export default function FilePreview({
   largeFileAcknowledged = false,
   onLoadLargeFile,
   onDownload,
+  onRetry,
 }: FilePreviewProps) {
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef<number | null>(null);
@@ -333,7 +335,14 @@ export default function FilePreview({
             </div>
           </div>
         ) : error ? (
-          <div className="text-sm text-rose-300">{error}</div>
+          <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg border border-rose-500/40 bg-rose-500/10 p-4 text-center">
+            <AlertTriangle className="h-6 w-6 text-rose-300" />
+            <p className="text-sm text-rose-200">{error}</p>
+            <Button type="button" size="sm" variant="outline" onClick={onRetry} disabled={!onRetry}>
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
         ) : (
           <>
                         {isPdf ? (
