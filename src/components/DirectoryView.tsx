@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Folder, FolderOpen } from 'lucide-react';
 
 import { getFileIcon, isImageFile } from '@/lib/icons';
@@ -74,6 +74,11 @@ export default function DirectoryView({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const focusedPathRef = useRef<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setFailedImages(new Set());
+  }, [entries]);
 
   useEffect(() => {
     if (visibleNodes.length === 0) {
@@ -281,6 +286,11 @@ export default function DirectoryView({
                 ? `${node.childCount ?? 0} items`
                 : `${formatFileSize(node.size)} · ${formatRelativeTime(node.mtime) || '—'}`;
             const isFocused = focusedPathRef.current === node.path;
+            const showImageThumbnail =
+              node.type === 'file' &&
+              isImageFile(node.name) &&
+              Boolean(workspace) &&
+              !failedImages.has(node.path);
 
             return (
               <button
@@ -298,30 +308,25 @@ export default function DirectoryView({
                 role="gridcell"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-background/60 overflow-hidden">
-                  {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                  {showImageThumbnail ? (
                     <img
-                      src={buildWorkspaceFileUrl(node.path, workspace)}
+                      src={buildWorkspaceFileUrl(node.path, workspace!)}
                       alt={node.name}
                       className="h-10 w-10 object-cover rounded-xl"
                       loading="lazy"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const icon = target.nextElementSibling as HTMLElement;
-                        if (icon) icon.style.display = 'block';
+                      onError={() => {
+                        setFailedImages((prev) => new Set(prev).add(node.path));
                       }}
                     />
-                  ) : null}
-                  <Icon
-                    className={
-                      node.type === 'dir'
-                        ? 'h-5 w-5 text-primary'
-                        : 'h-5 w-5 text-muted-foreground'
-                    }
-                    style={{
-                      display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
-                    }}
-                  />
+                  ) : (
+                    <Icon
+                      className={
+                        node.type === 'dir'
+                          ? 'h-5 w-5 text-primary'
+                          : 'h-5 w-5 text-muted-foreground'
+                      }
+                    />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold text-foreground">
@@ -342,6 +347,11 @@ export default function DirectoryView({
             const sizeLabel = node.type === 'file' ? formatFileSize(node.size) : '—';
             const timeLabel = formatRelativeTime(node.mtime) || '—';
             const isFocused = focusedPathRef.current === node.path;
+            const showImageThumbnail =
+              node.type === 'file' &&
+              isImageFile(node.name) &&
+              Boolean(workspace) &&
+              !failedImages.has(node.path);
 
             return (
               <button
@@ -359,30 +369,25 @@ export default function DirectoryView({
                 role="option"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/60 overflow-hidden">
-                  {node.type === 'file' && isImageFile(node.name) && workspace ? (
+                  {showImageThumbnail ? (
                     <img
-                      src={buildWorkspaceFileUrl(node.path, workspace)}
+                      src={buildWorkspaceFileUrl(node.path, workspace!)}
                       alt={node.name}
                       className="h-8 w-8 object-cover rounded-md"
                       loading="lazy"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const icon = target.nextElementSibling as HTMLElement;
-                        if (icon) icon.style.display = 'block';
+                      onError={() => {
+                        setFailedImages((prev) => new Set(prev).add(node.path));
                       }}
                     />
-                  ) : null}
-                  <Icon
-                    className={
-                      node.type === 'dir'
-                        ? 'h-4 w-4 text-primary'
-                        : 'h-4 w-4 text-muted-foreground'
-                    }
-                    style={{
-                      display: node.type === 'file' && isImageFile(node.name) && workspace ? 'none' : 'block'
-                    }}
-                  />
+                  ) : (
+                    <Icon
+                      className={
+                        node.type === 'dir'
+                          ? 'h-4 w-4 text-primary'
+                          : 'h-4 w-4 text-muted-foreground'
+                      }
+                    />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{node.name}</p>
