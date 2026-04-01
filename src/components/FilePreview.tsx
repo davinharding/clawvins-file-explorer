@@ -468,21 +468,38 @@ export default function FilePreview({
                 )}
               </Button>
             ) : null}
-            <SyntaxHighlighter
-              style={oneDark}
-              language={language}
-              showLineNumbers
-              wrapLongLines
-              customStyle={{
-                background: 'transparent',
-                margin: 0,
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word',
-                overflowWrap: 'break-word',
-              }}
+            <Suspense
+              fallback={(
+                <div className="h-full animate-pulse">
+                  <div className="h-6 w-full rounded bg-muted/40" />
+                  <div className="mt-4 space-y-3">
+                    {[95, 88, 76, 92, 64, 84, 58, 72, 46, 66].map((width, index) => (
+                      <div
+                        key={`preview-skeleton-${width}-${index}`}
+                        className="h-3 rounded bg-muted/40"
+                        style={{ width: `${width}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
             >
-              {displayContent}
-            </SyntaxHighlighter>
+              <SyntaxHighlighter
+                style={oneDark}
+                language={language}
+                showLineNumbers
+                wrapLongLines
+                customStyle={{
+                  background: 'transparent',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
+                }}
+              >
+                {displayContent}
+              </SyntaxHighlighter>
+            </Suspense>
             {isTruncated ? (
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
                 <span>
