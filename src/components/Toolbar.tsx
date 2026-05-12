@@ -119,7 +119,7 @@ export default function Toolbar({
 
       <details className="relative lg:hidden">
         <summary className="list-none">
-          <Button type="button" variant="outline" size="sm" asChild>
+          <Button type="button" variant="outline" size="sm">
             <span aria-label="Open view and sort controls" title="View and sort controls">
               <SlidersHorizontal className="h-4 w-4" /> Controls
             </span>
