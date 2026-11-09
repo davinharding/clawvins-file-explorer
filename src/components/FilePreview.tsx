@@ -49,20 +49,19 @@ const formatFileSize = (bytes?: number): string | null => {
 const MarkdownCode = ({
   className,
   children,
-  inline,
 }: {
   className?: string;
   children?: React.ReactNode;
-  inline?: boolean;
 }) => {
   const code = String(children ?? '').replace(/\n$/, '');
-
-  if (inline) {
-    return <code className={className}>{code}</code>;
-  }
-
   const match = /language-(\w+)/.exec(className ?? '');
   const language = match?.[1];
+
+  // react-markdown v9 no longer passes `inline`: fenced blocks carry a
+  // language class or span multiple lines, inline code does neither.
+  if (!language && !code.includes('\n')) {
+    return <code className="md-inline-code">{code}</code>;
+  }
 
   return (
     <SyntaxHighlighter
