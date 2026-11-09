@@ -1,108 +1,96 @@
-# 🗂️ Clawvin File Explorer
+<div align="center">
 
-A modern, dark-themed file explorer for browsing OpenClaw agent workspaces — built with React, TypeScript, and Tailwind CSS.
+# Clawvin File Explorer
 
-![Stack](https://img.shields.io/badge/React_18-TypeScript-blue) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-3-38bdf8) ![Vite](https://img.shields.io/badge/Vite-6-646cff)
+**See what your AI agents are thinking, in one place.**
 
----
+A fast, dark-themed browser for the files a team of AI agents reads and writes: their instructions, memory, skills, notes and scripts. Switch agents with one click and preview anything with proper Markdown rendering and syntax highlighting.
 
-## ✨ Features
+![React 18](https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite_5-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
 
-- **Workspace switcher** — instantly jump between all 6 OpenClaw workspaces (Clawvin, Patch, Scout, Vitals, Ledger, Atlas)
-- **Lazy file tree** — directories expand on click; children load on demand (no full tree scan upfront)
-- **File preview panel**
-  - Syntax highlighting for 100+ languages via `react-syntax-highlighter`
-  - Rendered Markdown (with GitHub Flavored Markdown support)
-  - Plain text fallback
-- **Breadcrumb navigation** — click any segment to jump up the tree
-- **Search / filter** — live-filters the visible file tree by name
-- **Copy path** — one-click clipboard copy of any file's full path
-- **Download** — download any file directly from the browser
-- **Dark grid theme** — consistent with Mission Control's design language
+![File Explorer previewing an agent's AGENTS.md with rendered Markdown](docs/screenshots/markdown-preview.png)
 
----
+</div>
 
-## 🛠 Stack
+## Why it exists
+
+My personal agent team runs on [OpenClaw](https://github.com/openclaw/openclaw), and each agent works out of its own workspace folder on a server. That folder is the agent's brain on disk: its operating instructions (`AGENTS.md`), dated memory notes, skills, research and scratch code. When something goes sideways, the fastest way to understand why is to read what the agent read.
+
+SSH-ing in and `cat`-ing files across six workspaces got old fast. This app puts every workspace behind one clean UI, so checking on an agent takes a few seconds instead of a terminal session. It sits alongside [Mission Control](https://github.com/davinharding/clawvins-mission-control), which shows what agents are *doing*. This one shows what they *know*.
+
+## Features
+
+- **Workspace switcher.** Jump between agents (Clawvin, Patch, Scout, Vitals, Ledger, Atlas) from the header, or deep-link to one with `?workspace=`.
+- **Lazy file tree.** Folders load their children on demand, so large workspaces open instantly.
+- **Rich preview.** GitHub-flavored Markdown (tables, task lists, code blocks), syntax highlighting for 100+ languages with line numbers, and image preview.
+- **Quick navigation.** Clickable breadcrumbs, a live filter with a <kbd>⌘</kbd>/<kbd>Ctrl</kbd>+<kbd>K</kbd> shortcut, and a file-size readout.
+- **Copy path and download** for any file.
+- **Safe by design.** The file server resolves every path inside its workspace root, so requests can't escape it.
+
+![Syntax-highlighted TypeScript preview with breadcrumbs](docs/screenshots/code-preview.png)
+
+## Try it locally
+
+The repo includes a tiny, dependency-free demo file server and sample agent workspaces, so you can run it without OpenClaw. Requires Node.js 18+.
+
+```bash
+git clone https://github.com/davinharding/clawvins-file-explorer.git
+cd clawvins-file-explorer
+npm install
+npm run demo:server   # serves demo/workspaces on http://localhost:8080
+npm run dev           # in a second terminal: http://localhost:5173
+```
+
+Vite proxies `/api` and `/ws` to port 8080, so the same dev setup works against a real OpenClaw file server too. To browse your own folders, point the demo server at them: `WORKSPACES_ROOT=/path/to/workspaces npm run demo:server` (each subfolder is one workspace).
+
+## How it works
+
+```mermaid
+flowchart LR
+    UI[React app] -- "GET /api/files?workspace=&path=" --> FS[File server]
+    UI -- "GET /api/files/content?workspace=&path=" --> FS
+    UI -- "GET /ws/:workspace/:path (download)" --> FS
+    FS --> W1[workspace/]
+    FS --> W2[workspace-coder/]
+    FS --> W3[workspace-scout/ ...]
+```
+
+The front end is static and talks to a three-endpoint file API. In production that API is OpenClaw's built-in file server, which also serves the built app. [`demo/server.mjs`](demo/server.mjs) is an ~80-line reference implementation of the same contract.
+
+## Tech stack
 
 | Layer | Tech |
-|-------|------|
-| UI Framework | React 18 + TypeScript |
-| Bundler | Vite 6 |
-| Styling | Tailwind CSS 3 |
-| Components | Radix UI primitives (ScrollArea, Collapsible, Separator) |
-| Icons | Lucide React |
+| --- | --- |
+| UI | React 18, TypeScript, Vite 5, Tailwind CSS |
+| Components | Radix UI primitives (ScrollArea, Collapsible, Separator), Lucide icons |
 | Markdown | `react-markdown` + `remark-gfm` |
-| Syntax highlighting | `react-syntax-highlighter` |
+| Code | `react-syntax-highlighter` (Prism, One Dark) |
+| Demo server | Node.js `http`, no dependencies |
 
----
+## Project layout
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js 18+
-- The OpenClaw file server (`server.js`) running
-
-### Development
-
-```bash
-npm install
-npm run dev
-```
-
-The dev server starts at `http://localhost:5173`.
-
-### Production Build
-
-```bash
-npm run build
-```
-
-Output goes to `dist/`. The OpenClaw file server (`server.js`) serves the built app and proxies filesystem requests.
-
-### Running via OpenClaw
-
-The app is served by the existing `.fileserver/server.js` at **`http://localhost:8080`**.
-
-The server was patched to:
-1. Route `/assets/` requests to the built `fe-dist/` output
-2. Exempt `fe-dist/` from the `.fileserver` security block
-
----
-
-## 📁 Project Structure
-
-```
+```text
 src/
-├── App.tsx              # Main app shell, workspace switcher, layout
-├── components/
-│   ├── FileTree.tsx     # Recursive lazy-loading tree
-│   ├── FilePreview.tsx  # Preview panel (markdown / syntax / text)
-│   ├── Breadcrumb.tsx   # Path breadcrumb nav
-│   └── ui/              # Shared Radix-based primitives
-├── lib/
-│   └── utils.ts         # cn() helper
-└── main.tsx             # Entry point
+  App.tsx                 shell, workspace switcher, layout, keyboard shortcuts
+  components/
+    FileTree.tsx          recursive, lazy-loading tree
+    FilePreview.tsx       Markdown, code and image preview
+    Breadcrumbs.tsx       path navigation
+    SearchBar.tsx         live filter
+    ui/                   Radix-based primitives
+  lib/api.ts              file API client
+demo/
+  server.mjs              reference file server
+  workspaces/             sample agent workspaces
 ```
 
----
+## Status
 
-## 🗃 Workspaces
-
-| Label | Path |
-|-------|------|
-| Clawvin | `~/.openclaw/workspace/` |
-| Patch | `~/.openclaw/workspace-coder/` |
-| Scout | `~/.openclaw/workspace-scout/` |
-| Vitals | `~/.openclaw/workspace-health/` |
-| Ledger | `~/.openclaw/workspace-finance/` |
-| Atlas | `~/.openclaw/workspace-atlas/` |
+Built for my own agent setup and used day to day alongside Mission Control. It is in maintenance mode now and is kept public as a reference for agent-ops tooling.
 
 ---
 
-## 🔒 Security
-
-The file server enforces path traversal protection — requests cannot escape the workspace root. The `.fileserver` directory itself is blocked from direct access (with an exception for the `fe-dist/` build output).
-
----
-
-*Part of the [Harding Labs](https://github.com/davinharding) toolchain.*
+<sub>Built by [Davin Harding](https://davin.io) · Part of the [Harding Labs](https://github.com/Harding-Labs) toolchain · See also: [Mission Control](https://github.com/davinharding/clawvins-mission-control)</sub>
