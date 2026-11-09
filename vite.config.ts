@@ -10,6 +10,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    // In dev, forward API and raw-file requests to the file server
+    // (OpenClaw's, or `npm run demo:server` for the bundled sample workspaces).
+    proxy: {
+      '/api': 'http://localhost:8080',
+      '/ws': 'http://localhost:8080',
+    },
+  },
   build: {
     outDir: path.resolve(__dirname, '../.fileserver/fe-dist'),
     emptyOutDir: true,

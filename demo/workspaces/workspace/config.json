@@ -1,0 +1,6 @@
+{
+  "team": "clawvin",
+  "briefChannel": "daily",
+  "agents": ["patch", "scout", "vitals", "ledger", "atlas"],
+  "missionControl": { "url": "http://localhost:3002", "autoArchiveHours": 24 }
+}
