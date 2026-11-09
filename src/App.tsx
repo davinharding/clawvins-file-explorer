@@ -11,7 +11,6 @@ import Breadcrumbs, { type BreadcrumbItem } from '@/components/Breadcrumbs';
 import FilePreview from '@/components/FilePreview';
 import FileTree from '@/components/FileTree';
 import SearchBar from '@/components/SearchBar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
